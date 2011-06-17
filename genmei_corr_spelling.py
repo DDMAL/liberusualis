@@ -14,7 +14,11 @@ from pymei.Import import xmltomei
 from spellcheck import correct
 
 """
-Generates mei files and outputs to ../mei_output. Make sure that ????.html and its corresponding ????.png and ????_uncoor.mei (if it exists) are in the pwd. This version of genmei.py uses Peter Norvig's spelling checker to attempt to improve the quality of the hocr text output.
+Generates mei files and outputs to ../mei_spellchecked_output. Make sure that ????.html and its corresponding ????.png and ????_uncoor.mei (if it exists) are in the pwd.
+
+This version of genmei.py uses Peter Norvig's spelling checker to attempt to improve the quality of the hocr text output. Make sure that spellcheck.py and latin-english.txt are also in this dir.
+
+This version of genmei is significantly slower than the original.
 """
 
 def getlines(hocrfile):
@@ -56,7 +60,7 @@ def add_text_lines(hocrfile, surface, section):
 		l=mod.l_()
 		l.id=generate_mei_id()
 		l.facs=zone.id
-		words=[correct(lower(word)) for word in line['text'].split()]
+		words=[correct(lower(word)) for word in line['text'].split() if correct(lower(word))!='s']
 		l.value=' '.join(words)
 		lg.add_child(l)
 		surface.add_child(zone)
@@ -72,7 +76,7 @@ for hocrfile in hocrfiles:
 		surface=meifile.search('surface')[0]
 		section=meifile.search('section')[0]
 		add_text_lines(hocrfile, surface, section)
-		meitoxml.meitoxml(meifile, '../mei_output/%s_spellchecked_uncorr.mei' % (hocrfile,))
+		meitoxml.meitoxml(meifile, '../mei_spellchecked_output/%s_uncorr.mei' % (hocrfile,))
 	else:
 		meifile=MeiDocument.MeiDocument()
 		mei=mod.mei_()
@@ -81,4 +85,4 @@ for hocrfile in hocrfiles:
 		mei.add_children([surface, section])
 		add_text_lines(hocrfile, surface, section)
 		meifile.addelement(mei)
-		meitoxml.meitoxml(meifile, '../mei_output/%s_spellchecked_fragment.mei' % (hocrfile,))
+		meitoxml.meitoxml(meifile, '../mei_spellchecked_output/%s_fragment.mei' % (hocrfile,))

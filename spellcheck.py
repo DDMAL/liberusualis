@@ -1,5 +1,9 @@
 import re, collections
 
+"""
+Peter Norvig's spelling corrector from http://norvig.com/spell-correct.html. Uses file 'latin-english.txt' as dictionary.
+"""
+
 def words(text): return re.findall('[a-z]+', text.lower()) 
 
 def train(features):
