@@ -1,17 +1,31 @@
+from string import lower
+
 import glob
 
 from lxml import etree
 
 from PIL import Image
 
+from optparse import OptionParser
+
 from pymei.Helpers import generate_mei_id
 from pymei.Components import Modules as mod, MeiDocument
 from pymei.Export import meitoxml
 from pymei.Import import xmltomei
 
+from spellcheck import correct
+
 """
-Generates mei files and outputs to ../mei_output. Make sure that ????.html and its corresponding ????.png and ????_uncoor.mei (if it exists) are in the pwd.
+Generates mei files and outputs to ../mei_spellchecked_output. Make sure that ????.html and its corresponding ????.png and ????_uncoor.mei (if it exists) are in the pwd.
+
+If no flag is given, this script uses Peter Norvig's spelling checker to attempt to improve the quality of the hocr text output. Make sure that spellcheck.py and latin-english.txt are also in this dir. It also removes dashes from lyrics and fixes common spelling errors that are not corrected by the spell-checker.
+
+If the flag -u (--uncorrected) is given, this script uses text from the hocr output without any correction.
 """
+
+parser=OptionParser()
+parser.add_option("-u", "--uncorrected", action="store_false", dest="corrected", default=True)
+(options, args)=parser.parse_args()
 
 def getlines(hocrfile):
 	"""
@@ -30,6 +44,21 @@ def getlines(hocrfile):
 		d['text']=element.text
 		l.append(d)
 	return l
+
+def correct_text(line):
+	"""
+	fixes text in lines - removes dashes from lyrics, corrects spelling
+	"""
+	# check if text output should be corrected or not
+	if options.corrected:
+		# remove dashes from text
+		line['text']=replace(line['text'], '- ', '')
+		line['text']=replace(line['text'], '-', '')
+		# correct spelling if corrected output is not 's' (short words sometimes get corrected to 's' - weird)
+		words=[correct(lower(word)) for word in line['text'].split() if correct(lower(word))!='s']
+		return ' '.join(words)
+	else:
+		return line['text']
 
 def add_text_lines(hocrfile, surface, section):
 	"""
@@ -52,7 +81,7 @@ def add_text_lines(hocrfile, surface, section):
 		l=mod.l_()
 		l.id=generate_mei_id()
 		l.facs=zone.id
-		l.value=line['text']
+		l.value=correct_text(line)
 		lg.add_child(l)
 		surface.add_child(zone)
 
@@ -67,7 +96,7 @@ for hocrfile in hocrfiles:
 		surface=meifile.search('surface')[0]
 		section=meifile.search('section')[0]
 		add_text_lines(hocrfile, surface, section)
-		meitoxml.meitoxml(meifile, '../mei_output/%s_uncorr.mei' % (hocrfile,))
+		meitoxml.meitoxml(meifile, '../mei_spellchecked_output/%s_uncorr.mei' % (hocrfile,))
 	else:
 		meifile=MeiDocument.MeiDocument()
 		mei=mod.mei_()
@@ -76,4 +105,4 @@ for hocrfile in hocrfiles:
 		mei.add_children([surface, section])
 		add_text_lines(hocrfile, surface, section)
 		meifile.addelement(mei)
-		meitoxml.meitoxml(meifile, '../mei_output/%s_fragment.mei' % (hocrfile,))
+		meitoxml.meitoxml(meifile, '../mei_spellchecked_output/%s_fragment.mei' % (hocrfile,))
