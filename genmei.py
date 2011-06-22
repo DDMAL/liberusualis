@@ -136,81 +136,85 @@ def add_text_lines(hocrfile, surface, section):
 		surface.add_child(zone)
 
 
+def create_mei(filename):
+	# build new mei file
+	meifile=MeiDocument.MeiDocument()
+	mei=mod.mei_()
+	
+	# header
+	meihead=mod.meihead_()
+	filedesc=mod.filedesc_()
+	titlestmt=mod.titlestmt_()
+	title=mod.title_()
+	pubstmt=mod.pubstmt_()
+	
+	meihead.add_child(filedesc)
+	filedesc.add_children([titlestmt, pubstmt])
+	titlestmt.add_child(title)
+	
+	# music - facsimile, layout, body
+	music=mod.music_()
+	
+	facsimile=mod.facsimile_()
+	facsimile.id=generate_mei_id()
+	surface=mod.surface_()
+	surface.id=generate_mei_id()
+	graphic=mod.graphic_()
+	graphic.id=generate_mei_id()
+	graphic.attributes={'xlink:href':'%s_original_image.tiff' % (filename,)}
+	
+	facsimile.add_child(surface)
+	surface.add_child(graphic)
+	
+	layout=mod.layout_()
+	layout.id=generate_mei_id()
+	page=mod.page_()
+	page.id=generate_mei_id()
+	page.attributes={'n':filename}
+	
+	layout.add_child(page)
+	
+	body=mod.body_()
+	mdiv=mod.mdiv_()
+	mdiv.attributes={'type':'solesmes'}
+	score=mod.score_()
+	section=mod.section_()
+	pb=mod.pb_()
+	pb.id=generate_mei_id()
+	pb.attributes={'pageref':page.id}
+	body.add_child(mdiv)
+	mdiv.add_child(score)
+	score.add_child(section)
+	section.add_child(pb)
+	
+	music.add_children([facsimile, layout, body])
+		
+	mei.add_children([meihead, music])
+	
+	meifile.addelement(mei)
+	
+	return meifile
+
 # import hocr and mei files into lists and strip extension where useful
 hocrfiles=[x.split('.')[0] for x in glob.glob('????.html')]
 allmeifiles=glob.glob('*.mei')
 meifiles=[x.split('_')[0] for x in allmeifiles]
 # for each hocr file: if corresponding mei file exists, open mei and edit - if not, create new mei
-for hocrfile in hocrfiles:
-	if hocrfile in meifiles:
+if options.corrected:
+	for hocrfile in hocrfiles:
 		output_name='%s_corr.mei' % (hocrfile,) if '%s_corr.mei' % (hocrfile,) in allmeifiles else '%s_uncorr.mei' % (hocrfile,)
-		meifile=xmltomei.xmltomei(output_name)
+		meifile=xmltomei.xmltomei(output_name) if hocrfile in meifiles else create_mei(hocrfile)
 		surface=meifile.search('surface')[0]
 		section=meifile.search('section')[0]
 		add_text_lines(hocrfile, surface, section)
-		if options.corrected:
-			meitoxml.meitoxml(meifile, '../mei_corrtxt/%s' % (output_name,))
-		else:
-			meitoxml.meitoxml(meifile, '../mei_uncorrtxt/%s' % (output_name,))
-	else:
-		# build new mei file
+		meitoxml.meitoxml(meifile, '../mei_corrtxt/%s' % (output_name,))
+else:
+	for hocrfile in hocrfiles:
 		meifile=MeiDocument.MeiDocument()
 		mei=mod.mei_()
-		
-		# header
-		meihead=mod.meihead_()
-		filedesc=mod.filedesc_()
-		titlestmt=mod.titlestmt_()
-		title=mod.title_()
-		pubstmt=mod.pubstmt_()
-		
-		meihead.add_child(filedesc)
-		filedesc.add_children([titlestmt, pubstmt])
-		titlestmt.add_child(title)
-		
-		# music - facsimile, layout, body
-		music=mod.music_()
-		
-		facsimile=mod.facsimile_()
-		facsimile.id=generate_mei_id()
 		surface=mod.surface_()
-		surface.id=generate_mei_id()
-		graphic=mod.graphic_()
-		graphic.id=generate_mei_id()
-		graphic.attributes={'xlink:href':'%s_original_image.tiff' % (hocrfile,)}
-		
-		facsimile.add_child(surface)
-		surface.add_child(graphic)
-		
-		layout=mod.layout_()
-		layout.id=generate_mei_id()
-		page=mod.page_()
-		page.id=generate_mei_id()
-		page.attributes={'n':hocrfile}
-		
-		layout.add_child(page)
-		
-		body=mod.body_()
-		mdiv=mod.mdiv_()
-		mdiv.attributes={'type':'solesmes'}
-		score=mod.score_()
 		section=mod.section_()
-		pb=mod.pb_()
-		pb.id=generate_mei_id()
-		pb.attributes={'pageref':page.id}
-		body.add_child(mdiv)
-		mdiv.add_child(score)
-		score.add_child(section)
-		section.add_child(pb)
-		
-		music.add_children([facsimile, layout, body])
-		
-		mei.add_children([meihead, music])
-		
-		# add text to new mei file
+		mei.add_children([surface, section])
 		add_text_lines(hocrfile, surface, section)
 		meifile.addelement(mei)
-		if options.corrected:
-			meitoxml.meitoxml(meifile, '../mei_corrtxt/%s_txtonly.mei' % (hocrfile,))
-		else:
-			meitoxml.meitoxml(meifile, '../mei_uncorrtxt/%s_txtonly.mei' % (hocrfile,))
+		meitoxml.meitoxml(meifile, '../mei_uncorrtxt/%s_mei_fragment.mei' % (hocrfile,))
