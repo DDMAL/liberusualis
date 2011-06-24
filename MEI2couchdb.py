@@ -22,6 +22,7 @@ import os
 import couchdb
 from math import *
 from music21.pitch import convertStepToPs
+from music21.interval import convertSemitoneToSpecifierGeneric
 #import time
 
 #*****************************FUNCTIONS*******************************
@@ -76,46 +77,46 @@ def getPitchNames(seq):
         midipitch = midipitch + [int(convertStepToPs(str(note.pitch[0]), int(note.octave)))]
     return [pnames, midipitch]
     
-def getIntervals():
+def getIntervals(semitones, pnames):
     """ Get quality (major, minor, etc.) invariant interval name and direction for example, an ascending 
         major second and an ascending minor second will both be encoded as 'u2'. the only tritone to occur is between 
         b and f, in the context of this application we will assume that the b will always be sung as b 
         flat. So a tritone found in the music is never encoded as a tritone in our database; it will instead always be represented as either a fifth 
         or a fourth, depending on inversion. If the one wishes to search for tritones, they may use the semitones field.
     """
-   intervals = ''
-   for z,interval in enumerate(semitones):
-       if interval == 0:
-           intervals = intervals + 'r, '
-       else:
-           if interval > 0:
-               direction = 'u'
-           else:
-               direction = 'd'
-           if interval == 6:
-               if pnames[z] == 'b':
-                   size = 5
-               else:
-                   size = 4
-           elif interval == -6:
-               if pnames[z] == 'b':
-                   size = 4
-               else:
-                   size = 5
-           else: 
-               size = int(floor(abs(interval)/2) + 1 + floor((abs(interval)-1)/6)) # equation to get from semitones to interval size (except tritone)
-           intervals = intervals + direction + str(size) + ', '
-   return intervals[:-2]
+    intervals = ''
+    for z,interval in enumerate(semitones):
+        if interval == 0:
+            intervals = intervals + 'r, '
+        else:
+            if interval > 0:
+                direction = 'u'
+            else:
+                direction = 'd'
+            if interval == 6:
+                if pnames[z] == 'b':
+                    size = 5
+                else:
+                    size = 4
+            elif interval == -6:
+                if pnames[z] == 'b':
+                    size = 4
+                else:
+                    size = 5
+            else: 
+                size = abs(int(convertSemitoneToSpecifierGeneric(interval)[1]))
+            intervals = intervals + direction + str(size) + ', '
+    return intervals[:-2]
 
 def getContour(semitones):
     contour = ''
-       for p in semitones:
-           if p == 0:
-               contour = contour + 'r' # repeated 
-           elif p > 0:
-               contour = contour + 'u' # up
-           elif p < 0:
-               contour = contour + 'd' # down
+    for p in semitones:
+       if p == 0:
+           contour = contour + 'r' # repeated 
+       elif p > 0:
+           contour = contour + 'u' # up
+       elif p < 0:
+           contour = contour + 'd' # down
     return contour
         
 def storeText(lines, zones, textdb):
@@ -136,11 +137,11 @@ path = args[1]
 meifiles = []
 for bd, dn, fn in os.walk(path):
     for f in fn:
-        meifiles = meifiles + [os.path.join(bd,f)]
+        if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
+            meifiles = meifiles + [os.path.join(bd,f)]
 
 meifiles.sort()
 #meifiles = [ffile for ffile in files if os.path.splitext(ffile)[1] == '.mei']
-#couch = couchdb.Server('http://localhost:5984/') 
 couch = couchdb.Server("http://localhost:5984") #couchdb.Server() should work too, but once it didn't so I hardcoded the address
 textdb = couch['text'] # database for text
 
@@ -166,7 +167,7 @@ for ffile in meifiles:
     storeText(lines, zones, textdb)
 
     #Set these to control which databases you access
-    shortest_gram = 2
+    shortest_gram = 10
     longest_gram = 10
     for i in range(shortest_gram,longest_gram+1):
        dbname = 'notegrams_'+str(i)
