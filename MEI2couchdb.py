@@ -158,7 +158,7 @@ textdb = couch['text'] # database for text
 
 # Iterate through each MEI file in directory
 from pymei.Import import convert
-nfile = 0
+for ffile in meifiles:
     print '\nProcessing ' + str(ffile) + '...'
     meifile = convert(str(ffile))
     page = meifile.search('page')
