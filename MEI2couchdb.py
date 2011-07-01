@@ -148,7 +148,7 @@ path = args[1]
 meifiles = []
 for bd, dn, fn in os.walk(path):
     for f in fn:
-        if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
+        if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei')) or '225' in f or '227' in f or '229' in f or '231' in f): # if current is uncorr version and corr version exists, don't add to list
             meifiles = meifiles + [os.path.join(bd,f)] 
 
 meifiles.sort()
@@ -165,15 +165,16 @@ for ffile in meifiles:
     pagen = int(page[0].attribute_by_name('n').value)
     notes = meifile.search('note')
     zones = meifile.search('zone')
-    nnotes = len(notes) # number of notes in file
+    #nnotes = len(notes) # number of notes in file
     #print str(nnotes) + 'notes\n'
     
     # get and store text
-    lines = meifile.search('l')
-    storeText(lines, zones, textdb)
+    # uncomment next two lines if you want to process text
+    #lines = meifile.search('l')
+    #storeText(lines, zones, textdb)
     
     #Set these to control which databases you access
-    shortest_gram = 10
+    shortest_gram = 2
     longest_gram = 10
     for i in range(shortest_gram,longest_gram+1):
         dbname = 'notegrams_'+str(i)
