@@ -29,6 +29,13 @@ from music21.pitch import convertStepToPs
 from music21.interval import convertSemitoneToSpecifierGeneric
 #import time
 
+import logging
+
+logging.basicConfig(filename='errors.log', format='%(asctime)-6s: %(name)s - %(levelname)s - %(message)s')
+lg = logging.getLogger('meisearch')
+lg.setLevel(logging.DEBUG)
+
+
 #*****************************FUNCTIONS*******************************
 def findbyID(llist, id):
     """ Returns the object in llist that has the given id. Used for finding zone.
@@ -167,7 +174,10 @@ textdb = couch['text'] # database for text
 from pymei.Import import convert
 for ffile in meifiles:
     print '\nProcessing ' + str(ffile) + '...'
-    meifile = convert(str(ffile))
+    try:
+        meifile = convert(str(ffile))
+    except Exception, e:
+        lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
     page = meifile.search('page')
     pagen = int(page[0].attribute_by_name('n').value)
     notes = meifile.search('note')
