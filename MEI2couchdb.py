@@ -1,16 +1,20 @@
 # ================================================================
 # MEI2couchdb.py
 #
-# Usage: python MEI2couchdb directory
+# Usage: python MEI2couchdb directory shortest_gram longest_gram dotext
+# where directory is the path to the directory containing MEI files to munge in to the couch
+#       shortest_gram and longest_gram are integers in the range 2--10 defining which dbs to add to
+#       dotext is 0 if you don't want to process text
 # 
 # Given a directory containing MEI files, this script iterates through all the MEI files
-# and saves a new CouchDB document for each location (box) on the page that we might want to 
+# and saves a new CouchDB document for each location (bounding box) on the page that we might want to 
 # highlight in our web application. We consider all pitch sequences 2--10 notes long. Pitch
 # sequences of different lengths are stored in separate CouchDB databases. Originally we were
 # storing one document per n-gram and then adding to a growing array of locations (box coordinates)
-# as instances of the same pitch sequence were found. To allow for page range filtering, we 
+# as instances of the same pitch sequence were found. To allow for page range filtering (and improved data access), we 
 # modified our organization to store a separate doocument for each location. This means that
-# several documents can have the same pitch sequence, but with different locations.
+# several documents can have the same pitch sequence, but with different locations. If a pitch sequence 
+# spans two systems, two seperate bounding boxes are stored in the same document.
 #
 # Author: Jessica Thompson
 # Last modified June 2011
@@ -116,7 +120,7 @@ def getIntervals(semitones, pnames):
                     size = 5
             else: 
                 size = abs(int(convertSemitoneToSpecifierGeneric(interval)[1]))
-            intervals = intervals + direction + str(size) + ', '
+            intervals = intervals + direction + str(size) + '_'
     return intervals[:-2]
 
 def getContour(semitones):
@@ -145,10 +149,13 @@ def storeText(lines, zones, textdb):
 #*****************************SCRIPT*******************************      
 args = sys.argv
 path = args[1]
+shortest_gram = int(args[2])
+longest_gram = int(args[3])
+dotext = int(args[4])
 meifiles = []
 for bd, dn, fn in os.walk(path):
     for f in fn:
-        if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei')) or '225' in f or '227' in f or '229' in f or '231' in f): # if current is uncorr version and corr version exists, don't add to list
+        if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
             meifiles = meifiles + [os.path.join(bd,f)] 
 
 meifiles.sort()
@@ -165,17 +172,17 @@ for ffile in meifiles:
     pagen = int(page[0].attribute_by_name('n').value)
     notes = meifile.search('note')
     zones = meifile.search('zone')
-    #nnotes = len(notes) # number of notes in file
+    nnotes = len(notes) # number of notes in file
     #print str(nnotes) + 'notes\n'
     
     # get and store text
-    # uncomment next two lines if you want to process text
-    #lines = meifile.search('l')
-    #storeText(lines, zones, textdb)
+    if dotext:
+        lines = meifile.search('l')
+        #storeText(lines, zones, textdb)
     
     #Set these to control which databases you access
-    shortest_gram = 2
-    longest_gram = 10
+    #shortest_gram = 2
+    #longest_gram = 10
     for i in range(shortest_gram,longest_gram+1):
         dbname = 'notegrams_'+str(i)
         db = couch[dbname] #existing db
@@ -216,6 +223,7 @@ for ffile in meifiles:
               # calculate difference between each adjacent entry in midipitch list
               semitones = [m-n for n, m in zip(midipitch[:-1], midipitch[1:])]
               str_semitones = str(semitones)[1:-1] # string will be stored instead of array for easy searching
+              str_semitones = str_semitones.replace(', ', '_')
 
               # get quality invariant interval name and direction
               # for example, an ascending major second and an ascending minor second will both be encoded as 'u2' 
