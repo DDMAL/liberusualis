@@ -16,6 +16,9 @@
 # several documents can have the same pitch sequence, but with different locations. If a pitch sequence 
 # spans two systems, two seperate bounding boxes are stored in the same document.
 #
+# Throughout this script, ulx and uly stand for upper left x and y coordinates respectively and lrx and lry stand for lower right coordinates. 
+# These values define the pixels on the original page image that should be highlighted for a given item (sequence of neumes, line of text, etc.)
+#
 # Author: Jessica Thompson
 # Last modified June 2011
 #
@@ -81,7 +84,7 @@ def getLocation(seq, meifile, zones):
         return [{"ulx": int(ulx) ,"uly": int(uly), "height": abs(uly - lry), "width": abs(ulx - lrx)}]
 
 def getNeumes(seq):
-    """
+    """ Given a list of MEI note elements, return a string of the names of the neumes seperated by underscores.
     """
     neumes = str(seq[0].parent.parent.attribute_by_name('name').value)
     for k in range(1, i):
@@ -90,7 +93,9 @@ def getNeumes(seq):
     return neumes
 
 def getPitchNames(seq):
-    """
+    """ Given a list of MEI note elements, return the tuple [pnames, midipitch] where pnames is a string of the 
+    pitch names of the given notes (no octave information) and midipitch is a list of the midi values for those 
+    same pitches. Music21's convertStepToPs function is used to get midi pitch values.
     """
     pnames = ""
     midipitch = []
@@ -103,13 +108,14 @@ def getIntervals(semitones, pnames):
     """ Get quality (major, minor, etc.) invariant interval name and direction for example, an ascending 
         major second and an ascending minor second will both be encoded as 'u2'. the only tritone to occur is between 
         b and f, in the context of this application we will assume that the b will always be sung as b 
-        flat. So a tritone found in the music is never encoded as a tritone in our database; it will instead always be represented as either a fifth 
-        or a fourth, depending on inversion. If the one wishes to search for tritones, they may use the semitones field.
+        flat. So a tritone found in the music is never encoded as a tritone in our database; it will instead always be 
+        represented as either a fifth or a fourth, depending on inversion. If the one wishes to search for tritones, 
+        they may use the semitones field.
     """
     intervals = ''
     for z,interval in enumerate(semitones):
         if interval == 0:
-            intervals = intervals + 'r, '
+            intervals = intervals + 'r'
         else:
             if interval > 0:
                 direction = 'u'
@@ -131,6 +137,9 @@ def getIntervals(semitones, pnames):
     return intervals[:-2]
 
 def getContour(semitones):
+    """ Given a list of integers defining the size and direction of a series of musical intervals in semitones, 
+        this function encodes the contour of the melody with Parsons code for musical contour where u=up, d=down, r=repeat.
+    """
     contour = ''
     for p in semitones:
        if p == 0:
@@ -142,6 +151,9 @@ def getContour(semitones):
     return contour
         
 def storeText(lines, zones, textdb):
+    """ For each line of text in the list "lines", this function gets the corresponding box coordinates and saves the 
+    line as a doc in the "text" database.
+    """
     for line in lines:
         text = line.value
         facs = str(line.attribute_by_name('facs').value)
@@ -153,12 +165,14 @@ def storeText(lines, zones, textdb):
         textdb.save({'pagen': pagen, 'text': text, 'location': {"ulx": ulx ,"uly": uly, "height": abs(uly - lry), "width": abs(ulx - lrx)}})
     return 1
 
-#*****************************SCRIPT*******************************      
+#***************************** MEI PROCESSING *******************************      
 args = sys.argv
 path = args[1]
 shortest_gram = int(args[2])
 longest_gram = int(args[3])
 dotext = int(args[4])
+
+# Generate list of files to process, preferring human-corrected MEI files
 meifiles = []
 for bd, dn, fn in os.walk(path):
     for f in fn:
@@ -166,8 +180,7 @@ for bd, dn, fn in os.walk(path):
             meifiles = meifiles + [os.path.join(bd,f)] 
 
 meifiles.sort()
-#meifiles = [ffile for ffile in files if os.path.splitext(ffile)[1] == '.mei']
-couch = couchdb.Server("http://localhost:5984") #couchdb.Server() should work too, but once it didn't so I hardcoded the address
+couch = couchdb.Server("http://localhost:5984")
 textdb = couch['text'] # database for text
 
 # Iterate through each MEI file in directory
