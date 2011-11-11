@@ -2,25 +2,25 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
+import search
 import json
 import os
-import solr
+# import solr
 from operator import itemgetter
 
 import divaserve
 import conf
 import utils
 
-solr_h = solr.SolrConnection(conf.SOLR_URL)
 diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 class SearchHandler(tornado.web.RequestHandler):
-    def get(self):
-        q = self.get_argument("q")
-        q = q.lower()
-        
-
-        self.write(json.dumps(ret))
+    def get(self, search_type, query, zoom_level):
+        try:
+            boxes = search.do_query(search_type, query, zoom_level)
+            self.write(json.dumps(boxes))
+        except search.LiberSearchException, e:
+            raise tornado.web.HTTPError(400)
 
 class RootHandler(tornado.web.RequestHandler):
     def get(self):
@@ -47,7 +47,7 @@ def abs_path(relpath):
 application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
     (abs_path(r"/divaserve/?"), DivaHandler),
-    (abs_path(r"/search"), SearchHandler),
+    (abs_path(r"/liber/query/(.*)/(.*)/(.*)"), SearchHandler),
 ], **settings)
 
 def main(port):

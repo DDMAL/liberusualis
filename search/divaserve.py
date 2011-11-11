@@ -1,6 +1,8 @@
 import os
 import sys
 import math
+import json
+
 try:
     from vipsCC import VImage
     def image_size(fn):
@@ -40,23 +42,31 @@ class DivaServe(object):
         lmz = 0
         # Read image sizes on startup
         print >> sys.stderr, "loading images..."
-        for i,f in enumerate(os.listdir(self.imgdir)):
-            if os.path.splitext(f)[1] not in (".tif", ".tiff"):
-                continue
-            img_wid, img_hei = image_size(os.path.join(self.imgdir, f))
 
-            max_zoom = self._get_max_zoom_level(img_wid, img_hei, self.til_wid, self.til_hei)
-            if max_zoom > lmz:
-                lmz = max_zoom
- 
-            self.images[i] = {
-                'mx_w': img_wid,
-                'mx_h': img_hei,
-                'mx_z': max_zoom,
-                'fn': f
-            }
+        if os.path.exists('divaserve.json'):
+            f = open('divaserve.json', 'r')
+            self.lowest_max_zoom, self.images = json.load(f)
+        else:
+            for i,f in enumerate(os.listdir(self.imgdir)):
+                if os.path.splitext(f)[1] not in (".tif", ".tiff"):
+                    continue
+                img_wid, img_hei = image_size(os.path.join(self.imgdir, f))
 
-        self.lowest_max_zoom = lmz
+                max_zoom = self._get_max_zoom_level(img_wid, img_hei, self.til_wid, self.til_hei)
+                if max_zoom > lmz:
+                    lmz = max_zoom
+     
+                self.images[i] = {
+                    'mx_w': img_wid,
+                    'mx_h': img_hei,
+                    'mx_z': max_zoom,
+                    'fn': f
+                }
+
+            self.lowest_max_zoom = lmz
+
+            json.dump((self.lowest_max_zoom, self.images), open('divaserve.json', "w"))
+
         print >> sys.stderr, "images loaded"
 
 
