@@ -1,0 +1,189 @@
+<html>
+<head>
+    <title>Search the Liber Usualis</title>
+
+    <link rel="stylesheet" href="{{app_root}}{{static_url("css/single.css")}}" type="text/css" />
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.10/themes/ui-lightness/jquery-ui.css" type="text/css" />
+    <link href='http://fonts.googleapis.com/css?family=Gentium+Basic:400,700' rel='stylesheet' type='text/css'>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+    <script src="{{app_root}}{{static_url("js/diva-utils.js")}}" type="text/javascript"></script>
+    <script src="{{app_root}}{{static_url("js/diva.js")}}" type="text/javascript"></script>
+
+    <style type="text/css">
+    
+    body {
+        background: url("{{app_root}}{{static_url("img/blackleather.jpg")}}") repeat;
+        font-family: 'Gentium Basic', serif;
+        font-size: 1.2em;
+        color: #fff;
+    }
+    
+    a:link, a:visited {
+        color: white;
+    }
+    
+    h1 {
+        font-weight: normal;
+        font-size: 4em;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .small-title {
+        font-size: 2em;
+        padding: 0em;
+        margin: 0em;
+    }
+    
+    input, select {
+        font-size: 1em;
+        background: #fff;
+    }
+    
+    div[id$="diva-inner"] {
+        background: url("{{app_root}}{{static_url("img/seamlesspaper1.jpg")}}") repeat;
+    }
+    
+    div[id$="diva-outer"] {
+        height: 560px;
+    }
+
+    .center {
+        text-align: center;
+    }
+
+    div[id^=search-box] {
+        position: absolute;
+        z-index: 7000;
+        border: 2px solid transparent;
+    }
+
+    .search-box-inner {
+        width: 100%;
+        height: 100%;
+        opacity: 0.25;
+    }
+
+    /* The "current" search box */
+    .search-box-this {
+        border: 2px solid #555 !important;
+    }
+
+    #search-colours {
+        list-style-type: none;
+        display: inline;
+        padding-left: 0px;
+        position: relative;
+        top: 3px;
+    }
+
+    #search-colours li {
+        vertical-align: text-bottom;
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+    }
+
+    #search-colours .selected {
+        border: 2px solid #000;
+    }
+
+    .colour-red {
+        background-color: #FF0000;
+    }
+
+    .colour-orange {
+        background-color: #F88017;
+    }
+
+    .colour-yellow {
+        background-color: #FFFF00;
+    }
+
+    .colour-green {
+        background-color: #B1FB17;
+    }
+
+    .colour-blue {
+        background-color: #5CB3FF;
+    }
+
+    .colour-purple {
+        background-color: #8D38C9;
+    }
+
+    #search-status {
+        display: inline-block;
+        padding-left: 5px;
+        padding-right: 5px;
+        width: 500px;
+    }
+
+    #search-bar {
+        position: absolute;
+        bottom: 0px;
+        left: 50%;
+        margin-left: -410px;
+        z-index: 19500 !important;
+        width: 750px;
+        height: 76px;
+        text-align: center;
+    }
+    </style>
+</head>
+<body>
+    <div class="center" id="search-wrapper">
+        <span class="small-title">Search the</span><br />
+        <h1>Liber usualis</h1>
+        <p>What is this? <a href="http://ddmal.music.mcgill.ca/research/omr/Search_the_Liber_Usualis">Find out more about what we are trying to do.</a></p>
+    </div>
+    <br />
+    <div id="diva-wrapper"></div>
+	<br />
+	<p class="center">Hosted by the <a href="http://ddmal.music.mcgill.ca">Distributed Digital Music Archives &amp; Libraries Lab</a> of McGill University. <a href="mailto:andrew.hankinson@mail.mcgill.ca,ashley@music.mcgill.ca,ich@music.mcgill.ca">Contact us with questions or comments</a></p>
+    <script src="{{app_root}}{{static_url("js/search.js")}}"></script>
+    <script>
+    $(document).ready(function() {
+        $('#search-wrapper').search({
+            highlightColour: 'colour-orange'
+        });
+        var search = $('#search-wrapper').data('search');
+        var dv;
+        $('#diva-wrapper').diva({
+            zoomLevel: 0,
+            tileFadeSpeed: 100,
+            enableAutoTitle: false,
+            enableGrid: false,
+            zoomLevel: 1,
+            iipServerBaseUrl: "{{ iip_server }}",
+            backendServer: "{{app_root}}/divaserve/?q=1",
+            onScrollUp: function(newCurrentPage) {
+                search.handleUpScroll(newCurrentPage);
+            },
+            onScrollDown: function(newCurrentPage) {
+                // newCurrentPage is the index (starting at 0) so add 1
+                search.handleDownScroll(newCurrentPage);
+            },
+            onZoom: function(newZoomLevel) {
+                search.handleZoom(newZoomLevel);
+            },
+            onFullscreen: function(zoomLevel) {
+                search.handleZoom(zoomLevel);
+            },
+            onFullscreenEnter: function() {
+                search.createSearchbar();
+            },
+            onFullscreenExit: function() {
+                search.destroySearchbar();
+            }
+        });
+        dv = $('#diva-wrapper').data('diva');
+        search.setZoomLevel(dv.getZoomLevel());
+        search.setDocumentViewer(dv);
+    });
+    </script>
+</body>
+</html>
