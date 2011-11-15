@@ -24,7 +24,7 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
     elif qtype == "pnames" or qtype == "pnames-invariant":
         if not search_utils.valid_pitch_sequence(query):
             raise LiberSearchException("The query you provided is not a valid pitch sequence")
-        real_query = query if qtype == 'pnames' else ','.join(search_utils.get_transpositions(query))
+        real_query = query if qtype == 'pnames' else ' OR '.join(search_utils.get_transpositions(query))
         query_stmt = 'pnames:{0}'.format(real_query)
     elif qtype == "contour":
         query_stmt = 'contour:{0}'.format(query)
@@ -37,7 +37,10 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
     else:
         raise LiberSearchException("Invalid query type provided")
 
-    response = solrconn.query(query_stmt, score=False, sort="pagen asc", rows=1000000)
+    if qtype == "pnames-invariant":
+        response = solrconn.query(query_stmt, score=False, sort="pagen asc", q_op="OR", rows=1000000)
+    else:
+        response = solrconn.query(query_stmt, score=False, sort="pagen asc", rows=1000000)
     numfound = response.numFound
 
     results = []

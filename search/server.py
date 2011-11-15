@@ -49,7 +49,7 @@ def abs_path(relpath):
 application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
     (abs_path(r"/divaserve/?"), DivaHandler),
-    (abs_path(r"/liber/query/(.*)/(.*)/(.*)"), SearchHandler),
+    (abs_path(r"/query/(.*)/(.*)/(.*)"), SearchHandler),
 ], **settings)
 
 def main(port):
