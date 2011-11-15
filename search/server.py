@@ -10,7 +10,6 @@ from operator import itemgetter
 
 import divaserve
 import conf
-import utils
 
 diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
