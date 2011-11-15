@@ -138,10 +138,10 @@ def getIntervals(semitones, pnames):
         represented as either a fifth or a fourth, depending on inversion. If the one wishes to search for tritones, 
         they may use the semitones field.
     """
-    intervals = ''
+    intervals = []
     for z,interval in enumerate(semitones):
         if interval == 0:
-            intervals = intervals + 'r'
+            intervals.append('r')
         else:
             if interval > 0:
                 direction = 'u'
@@ -159,8 +159,10 @@ def getIntervals(semitones, pnames):
                     size = 5
             else: 
                 size = abs(int(convertSemitoneToSpecifierGeneric(interval)[1]))
-            intervals = intervals + direction + str(size) + '_'
-    return intervals[:-2]
+
+            intervals.append("{0}{1}".format(direction, str(size)))
+
+    return "_".join(intervals)
 
 def getContour(semitones):
     """ Given a list of integers defining the size and direction of a series of musical intervals in semitones, 
@@ -202,9 +204,6 @@ def processMeiFile(ffile, longest_gram, shortest_gram):
 
     page = meifile.search('page')
     pagen = int(page[0].attribute_by_name('n').value)
-
-    if pagen < 1504:
-        return
 
     notes = meifile.search('note')
     zones = meifile.search('zone')
