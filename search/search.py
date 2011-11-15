@@ -4,6 +4,7 @@ import search_utils
 import conf
 import json
 import re
+import types
 from operator import itemgetter
 
 solrconn = solr.SolrConnection(conf.SOLR_URL)
@@ -28,9 +29,11 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
     elif qtype == "contour":
         query_stmt = 'contour:{0}'.format(query)
     elif qtype == "text":
-        query_stmt = 'text:{0}'.format(query)
+        query_stmt = 'text:"{0}"'.format(query)
     elif qtype == "intervals":
         query_stmt = 'intervals:{0}'.format(query.replace(' ', '_'))
+    elif qtype == "incipit":
+        query_stmt = "incipit:{0}*".format(query)
     else:
         raise LiberSearchException("Invalid query type provided")
 
@@ -48,12 +51,20 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
     for d in response:
         page_number = d['pagen']
         locations = json.loads(d['location'].replace("'", '"'))
-        for location in locations:
-            box_w = location['width']
-            box_h = location['height']
-            box_x = location['ulx']
-            box_y = location['uly']
+
+        if isinstance(locations, types.DictType):
+            box_w = locations['width']
+            box_h = locations['height']
+            box_x = locations['ulx']
+            box_y = locations['uly']
             boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y})
+        else:
+            for location in locations:
+                box_w = location['width']
+                box_h = location['height']
+                box_x = location['ulx']
+                box_y = location['uly']
+                boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y})
     
     zoom_diff = max_zoom - int(zoom_level)
     real_boxes = []

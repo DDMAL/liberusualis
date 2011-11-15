@@ -265,7 +265,7 @@
             // Check for hash params
             var type = $.getHashParam('type');
             var query = $.getHashParam('query');
-            if (type == 'pnames' || type == 'pnames-invariant' || type == 'neumes' || type == 'text' || type == 'contour' || type == 'intervals') {
+            if (type == 'pnames' || type == 'pnames-invariant' || type == 'neumes' || type == 'text' || type == 'contour' || type == 'intervals' || type == "incipit") {
                settings.query = query;
                settings.query_type = type;
 
@@ -450,7 +450,7 @@
             settings.elementSelector = '#' + $(element).attr('id');
             
             // Now create all the divs and such
-            $(settings.elementSelector).append('<form id="search-input"><input type="text" id="search-query" size="25" /><select id="search-type" name="search-type"><option name="neumes">Neumes</option><option name="pnames" selected="selected">Strict pitch sequence</option><option name="pnames-invariant">Transposed pitch sequence</option><option name="contour">Contour</option><option name="intervals">Intervals</option><option name="text">Text</option></select><input type="submit" id="search-go" value="Search" /><input type="button" id="search-clear" value="Clear" disabled="disabled" /><ul id="search-colours"><li class="colour-red"></li><li class="colour-orange"></li><li class="colour-yellow"></li><li class="colour-green"></li><li class="colour-blue"></li><li class="colour-purple"></li></ul></form>');
+            $(settings.elementSelector).append('<form id="search-input"><input type="text" id="search-query" size="25" /><select id="search-type" name="search-type"><option name="neumes">Neumes</option><option name="pnames" selected="selected">Strict pitch sequence</option><option name="pnames-invariant">Transposed pitch sequence</option><option name="contour">Contour</option><option name="intervals">Intervals</option><option name="text">Text</option><option name="incipit">Incipit</option></select><input type="submit" id="search-go" value="Search" /><input type="button" id="search-clear" value="Clear" disabled="disabled" /><ul id="search-colours"><li class="colour-red"></li><li class="colour-orange"></li><li class="colour-yellow"></li><li class="colour-green"></li><li class="colour-blue"></li><li class="colour-purple"></li></ul></form>');
             $(settings.elementSelector).append('<div id="search-controls"><input type="button" id="search-prev" value="previous" disabled="disabled" /><div id="search-status"></div><input type="button" id="search-next" value="next" disabled="disabled" /></div>');
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');

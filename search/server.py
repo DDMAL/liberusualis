@@ -16,6 +16,8 @@ diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 class SearchHandler(tornado.web.RequestHandler):
     def get(self, search_type, query, zoom_level):
+        if not query:
+            raise tornado.web.HTTPError(400)
         try:
             boxes = search.do_query(search_type, query, zoom_level)
             self.write(json.dumps(boxes))
