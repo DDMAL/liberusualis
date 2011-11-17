@@ -25,6 +25,9 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
         if not search_utils.valid_pitch_sequence(query):
             raise LiberSearchException("The query you provided is not a valid pitch sequence")
         real_query = query if qtype == 'pnames' else ' OR '.join(search_utils.get_transpositions(query))
+
+        print real_query
+
         query_stmt = 'pnames:{0}'.format(real_query)
     elif qtype == "contour":
         query_stmt = 'contour:{0}'.format(query)
