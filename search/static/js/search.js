@@ -101,7 +101,7 @@
 
         var loadBoxes = function() {
             updateStatus("Loading results");
-            var ajaxURL = '/liber/query/' + settings.query_type + '/' + settings.query + '/' + settings.zoomLevel;
+            var ajaxURL = '/query/' + settings.query_type + '/' + settings.query + '/' + settings.zoomLevel;
             $.ajax({
                 url: ajaxURL,
                 dataType: 'json',
