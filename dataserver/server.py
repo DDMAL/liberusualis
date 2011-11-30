@@ -14,15 +14,10 @@ class RootHandler(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/json")
         self.write(json.dumps({}))
 
-class DivaHandler(tornado.web.RequestHandler):
+class PageHandler(tornado.web.RequestHandler):
     def get(self):
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(info))
-
-class FeastHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(fields))
+        self.get_header("Content-Type")
+        self.write(json.dumps({}))
 
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
