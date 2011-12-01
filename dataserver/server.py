@@ -23,7 +23,7 @@ class PageHandler(tornado.web.RequestHandler):
         page_number = pgno.rjust(4, "0")
         page_mei_file = os.path.join(conf.MEI_FILE_PATH, "{0}_corr.mei".format(page_number))
 
-        headers = self.request.headers.get("Accept").split(",")
+        headers = self.request.headers.get("Accept", "").split(",")
 
         print headers
 
