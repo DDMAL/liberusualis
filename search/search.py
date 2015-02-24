@@ -12,6 +12,7 @@ solrconn = solr.SolrConnection(conf.SOLR_URL)
 class LiberSearchException(Exception):
     def __init__(self, message):
         self.message = message
+
     def __str__(self):
         return repr(self.message)
 
@@ -19,14 +20,14 @@ class LiberSearchException(Exception):
 def do_query(qtype, query, zoom_level, max_zoom=4):
     query = query.lower()
 
+    print qtype, query
+
     if qtype == "neumes":
         query_stmt = 'neumes:{0}'.format(query.replace(' ', '_'))
     elif qtype == "pnames" or qtype == "pnames-invariant":
         if not search_utils.valid_pitch_sequence(query):
             raise LiberSearchException("The query you provided is not a valid pitch sequence")
         real_query = query if qtype == 'pnames' else ' OR '.join(search_utils.get_transpositions(query))
-
-        print real_query
 
         query_stmt = 'pnames:{0}'.format(real_query)
     elif qtype == "contour":
@@ -43,7 +44,9 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
     if qtype == "pnames-invariant":
         response = solrconn.query(query_stmt, score=False, sort="pagen asc", q_op="OR", rows=1000000)
     else:
+        print "pre", query_stmt
         response = solrconn.query(query_stmt, score=False, sort="pagen asc", rows=1000000)
+        print "post"
     numfound = response.numFound
 
     results = []
@@ -71,11 +74,11 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
                 box_x = location['ulx']
                 box_y = location['uly']
                 boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y})
-    
+
     zoom_diff = max_zoom - int(zoom_level)
     real_boxes = []
     for box in boxes:
-        #incorporate zoom
+        # incorporate zoom
         box['w'] = search_utils.incorporate_zoom(box['w'], zoom_diff)
         box['h'] = search_utils.incorporate_zoom(box['h'], zoom_diff)
         box['x'] = search_utils.incorporate_zoom(box['x'], zoom_diff)
@@ -83,7 +86,7 @@ def do_query(qtype, query, zoom_level, max_zoom=4):
 
         if box['w'] > 0 and box['h'] > 0:
             real_boxes.append(box)
-    
+
     boxes_sorted = sorted(real_boxes, key=itemgetter('p', 'y'))
 
     return boxes_sorted

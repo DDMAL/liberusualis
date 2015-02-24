@@ -146,7 +146,7 @@
     <br />
     <div id="diva-wrapper"></div>
 	<br />
-	<p class="center">Hosted by the <a href="http://ddmal.music.mcgill.ca">Distributed Digital Music Archives &amp; Libraries Lab</a> of McGill University. <a href="mailto:andrew.hankinson@mail.mcgill.ca,ashley@music.mcgill.ca,ich@music.mcgill.ca">Contact us with questions or comments</a></p>
+	<p class="center">Hosted by the <a href="http://ddmal.music.mcgill.ca">Distributed Digital Music Archives &amp; Libraries Lab</a> of McGill University. <a href="mailto:andrew.hankinson@mail.mcgill.ca,ich@music.mcgill.ca,andrew.horwitz@mail.mcgill.ca">Contact us with questions or comments</a></p>
     <script src="{{app_root}}{{static_url("js/search.js")}}"></script>
     <script>
     $(document).ready(function() {
@@ -160,33 +160,15 @@
             iipServerURL: "http://diva.simssa.ca/fcgi-bin/iipsrv.fcgi",
             imageDir: "/srv/images/liber",
             objectData: '{{static_url("liber.json")}}',
-            onScrollUp: function(newCurrentPage) {
-                search.handleUpScroll(newCurrentPage);
-            },
-            onScrollDown: function(newCurrentPage) {
-                // newCurrentPage is the index (starting at 0) so add 1
-                search.handleDownScroll(newCurrentPage);
-            },
-            onZoom: function(newZoomLevel) {
-                search.handleZoom(newZoomLevel);
-            },
-            onFullscreen: function(zoomLevel) {
-                search.handleZoom(zoomLevel);
-            },
-            onFullscreenEnter: function() {
-                search.createSearchbar();
-            },
-            onFullscreenExit: function() {
-                search.destroySearchbar();
-            }
         });
         $('#search-wrapper').search({
             highlightColour: 'colour-orange'
         });
-        var search = $('#search-wrapper').data('search');
-        dv = $('#diva-wrapper').data('diva');
-        search.setZoomLevel(dv.getZoomLevel());
-        search.setDocumentViewer(dv);
+        diva.Events.subscribe("ViewerDidLoad", function(){
+            var search = $('#search-wrapper').data('search');
+            dv = $('#diva-wrapper').data('diva');
+            search.setDocumentViewer(dv);
+        });
     });
     </script>
 </body>

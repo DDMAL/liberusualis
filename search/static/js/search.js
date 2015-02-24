@@ -101,7 +101,8 @@
 
         var loadBoxes = function() {
             updateStatus("Loading results");
-            var ajaxURL = '/query/' + settings.query_type + '/' + settings.query + '/' + settings.zoomLevel;
+            //the 4 in the ajaxURL is the max zoom level * 2. Leaving this as a magic number until I can fix Solr
+            var ajaxURL = '/query/' + settings.query_type + '/' + settings.query + '/' + 4;
             $.ajax({
                 url: ajaxURL,
                 dataType: 'json',
@@ -115,60 +116,61 @@
                     settings.numBoxes = data.length;
 
                     // Stop trying to do stuff if there are 0 results
-                    if (settings.numBoxes == 0) {
+                    if (settings.numBoxes === 0) {
                         updateStatus("No results for " + settings.query);
                         return;
                     }
 
                     updateStatus("Result <span></span> of " + settings.numBoxes + " for " + settings.query);
 
+                    var pageIndexes = [];
+                    var regions = [];
+                    for (idx in data)
+                    {
+                        var curBox = data[idx];
+                        var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
+                        var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y']};
+                        console.log(dimensionsArr);
+                        if (pIindex == -1) 
+                        {
+                            pageIndexes.push(curBox['p'] - 1);
+                            regions.push([dimensionsArr]);
+                        }
+                        else
+                        {
+                            regions[pIindex].push(dimensionsArr);
+                        }
+                    }
 
-                    var numAppended = 0;
-                    for (i = 0; i < settings.numBoxes; i++) {
-                        // Try to append the box no matter what
-                        if (appendBox(i)) {
-                            // The next up should be the first one appended - 1
-                            if (settings.nextUp == -1) {
+                    settings.diva.highlightOnPages(pageIndexes, regions, undefined, 'search-box');
+                    
+                    var currentPage = settings.diva.getCurrentPage();
+                    var lastPage = settings.boxes[settings.numBoxes-1].p;
+                    var firstPage = settings.boxes[0].p;
+
+                    if (currentPage > lastPage) {
+                        // We're below all the boxes
+                        settings.nextDown = settings.numBoxes;
+                        settings.nextUp = settings.numBoxes - 1;
+                    } else if (currentPage < firstPage) {
+                        // We're above all the boxes
+                        settings.nextDown = 0;
+                        settings.nextUp = -1;
+                    } else {
+                        // Some are above, some are below
+                        // Go through all the page numbers, figuring out where we are
+                        for (i = 0; i < settings.numBoxes; i++) {
+                            var thisBoxPage = settings.boxes[i].p;
+
+                            // Find the index of the page right after the current page
+                            if (thisBoxPage > currentPage) {
+                                settings.nextDown = i;
                                 settings.nextUp = i - 1;
-                                // If i = 0 it just stays the same whatever
-                            }
-
-                            // Gets overriden each time - starts at 0
-                            settings.nextDown = i + 1;
-                            numAppended++;
-                        }
-                    }
-
-                    // If there's nothing to append, figure out where in the search results we are
-                    // Possibilities: all are above, all are below, some are above and some are below
-                    if (numAppended == 0) {
-                        var currentPage = settings.diva.getCurrentPage();
-                        var lastPage = settings.boxes[settings.numBoxes-1].p;
-                        var firstPage = settings.boxes[0].p;
-
-                        if (currentPage > lastPage) {
-                            // We're below all the boxes
-                            settings.nextDown = settings.numBoxes;
-                            settings.nextUp = settings.numBoxes - 1;
-                        } else if (currentPage < firstPage) {
-                            // We're above all the boxes
-                            settings.nextDown = 0;
-                            settings.nextUp = -1;
-                        } else {
-                            // Some are above, some are below
-                            // Go through all the page numbers, figuring out where we are
-                            for (i = 0; i < settings.numBoxes; i++) {
-                                var thisBoxPage = settings.boxes[i].p;
-
-                                // Find the index of the page right after the current page
-                                if (thisBoxPage > currentPage) {
-                                    settings.nextDown = i;
-                                    settings.nextUp = i - 1;
-                                    break;
-                                }
+                                break;
                             }
                         }
                     }
+
                     // Jump to the first result OR the result specified in the URL
                     if (settings.firstRequest) {
                         desiredResult = parseInt($.getHashParam('result'), 10);
@@ -235,8 +237,8 @@
 
             // Now figure out the page that box is on
             var desiredPage = settings.boxes[desiredBox].p;
-            // Now jump to that page
-            settings.diva.gotoPage(desiredPage);
+
+            settings.diva.gotoPageByNumber(desiredPage);
             // Get the height above top for that box
             var boxTop = settings.boxes[desiredBox].y;
             var currentScrollTop = parseInt($('#1-diva-outer').scrollTop(), 10);
@@ -256,7 +258,7 @@
             settings.currentBox = desiredBox;
             handleSearchButtons();
             $.updateHashParam('result', desiredBox + 1);
-        }
+        };
 
         this.setDocumentViewer = function(diva) {
             settings.diva = diva;
@@ -277,97 +279,31 @@
             }
         };
 
-        this.handleZoom = function(newZoomLevel) {
-            // New ajax request, set the zoom level
-            settings.zoomLevel = newZoomLevel;
-            // Only if we're already in a search mode
-            if (!$('#search-clear').attr('disabled')) {
-                loadBoxes();
+        diva.Events.subscribe("ModeDidSwitch", function(inFullscreen)
+        {
+            if (inFullscreen)
+            {
+            // The searchbar that appears at the top in fullscreen mode
+                $('body').append('<div id="search-bar" class="ui-widget ui-widget-content ui-corner-all ui-state-highlight"></div>');
+                $('#search-bar').append($('#search-input').remove());
+                $('#search-bar').append($('#search-controls').remove());
+                handleEvents();
+
+                // Some widths need to be adjusted for the iPad
+                if (navigator.platform == 'iPad') {
+                    $('#search-bar').css('width', '768px').css('margin-left', '-384px').css('height', '100px');
+                    $('#search-query').css('width', '170px');
+                }
             }
 
-            // IF THERE IS A RESULT # IN THE URL DELETE IT!!!!!!!!
-            $.removeHashParam('result');
-        }
-
-        this.handleDownScroll = function(newCurrentPage) {
-            // Only do anything if we're in search mode
-            if (!$('#search-clear').attr('disabled')) {
-                // Try to show the next box
-                // Check if the first box loaded needs to be updated
-                while (inRange(settings.nextDown)) {
-                    var nextPage = settings.boxes[settings.nextDown].p;
-                    if (pageExists(nextPage) || nextPage <= newCurrentPage) {
-                        appendBox(settings.nextDown);
-                        settings.nextDown++;
-                    } else {
-                        break;
-                    }
-                }
-
-                while (inRange(settings.nextUp+1)) {
-                    // Handle updating nextUp - check if the next up + 1 page is above the current page
-                    var prevPage = settings.boxes[settings.nextUp+1].p;
-                    if (prevPage <= newCurrentPage) {
-                        settings.nextUp++;
-                    } else {
-                        break;
-                    }
-                }
-
-                handleSearchButtons();
+            else
+            {
+                $('#search-wrapper').append($('#search-input').remove());
+                $('#search-wrapper').append($('#search-controls').remove());
+                $('#search-bar').remove();
+                handleEvents(); // alternative to using live()
             }
-        };
-
-        this.handleUpScroll = function(newCurrentPage) {
-            // Only do anything if we're in search mode
-            if (!$('#search-clear').attr('disabled')) {
-                while (inRange(settings.nextUp)) {
-                    var nextPage = settings.boxes[settings.nextUp].p;
-                    if (pageExists(nextPage) || nextPage > newCurrentPage) {
-                        appendBox(settings.nextUp);
-                        settings.nextUp--;
-                    } else {
-                        break;
-                    }
-                }
-
-                while (inRange(settings.nextDown-1)) {
-                    var prevPage = settings.boxes[settings.nextDown-1].p;
-                    if (prevPage > newCurrentPage) {
-                        settings.nextDown--;
-                    } else {
-                        break;
-                    }
-                }
-                handleSearchButtons();
-            }
-        };
-
-        this.setZoomLevel = function(newZoomLevel) {
-            settings.zoomLevel = newZoomLevel;
-        };
-
-        // The searchbar that appears at the top in fullscreen mode
-        this.createSearchbar = function() {
-            $('body').append('<div id="search-bar" class="ui-widget ui-widget-content ui-corner-all ui-state-highlight"></div>');
-            $('#search-bar').append($('#search-input').remove());
-            $('#search-bar').append($('#search-controls').remove());
-            handleEvents();
-
-            // Some widths need to be adjusted for the iPad
-            if (navigator.platform == 'iPad') {
-                $('#search-bar').css('width', '768px').css('margin-left', '-384px').css('height', '100px');
-                $('#search-query').css('width', '170px');
-            }
-
-        };
-
-        this.destroySearchbar = function() {
-            $('#search-wrapper').append($('#search-input').remove());
-            $('#search-wrapper').append($('#search-controls').remove());
-            $('#search-bar').remove();
-            handleEvents(); // alternative to using live()
-        }
+        });
 
         // Called when a user clicks a colour
         var handleColourChange = function(newColour) {
@@ -444,7 +380,7 @@
             } else {
                 $('#search-status').html(message);
             }
-        }
+        };
 
         var init = function() {
             settings.elementSelector = '#' + $(element).attr('id');
@@ -459,7 +395,7 @@
 
             // Make the status display the default message
             updateStatus();
-        }
+        };
 
         init();
     };
