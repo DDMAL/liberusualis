@@ -1,3 +1,17 @@
+//credit to http://stackoverflow.com/a/21963136
+var lut = []; for (var i=0; i<256; i++) { lut[i] = (i<16?'0':'')+(i).toString(16); }
+function genUUID()
+{
+  var d0 = Math.random()*0xffffffff|0;
+  var d1 = Math.random()*0xffffffff|0;
+  var d2 = Math.random()*0xffffffff|0;
+  var d3 = Math.random()*0xffffffff|0;
+  return 'm-' + lut[d0&0xff]+lut[d0>>8&0xff]+lut[d0>>16&0xff]+lut[d0>>24&0xff]+'-'+
+    lut[d1&0xff]+lut[d1>>8&0xff]+'-'+lut[d1>>16&0x0f|0x40]+lut[d1>>24&0xff]+'-'+
+    lut[d2&0x3f|0x80]+lut[d2>>8&0xff]+'-'+lut[d2>>16&0xff]+lut[d2>>24&0xff]+
+    lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff];
+}
+
 (function( $ ) {
     var Search = function(element, options) {
         // These are elements that can be overridden
@@ -16,7 +30,7 @@
             queryType: '',              // The type - text, pnames, etc
             diva: null,                 // The object reference
             elementSelector: '',        // Set in init(); the ID of the element plus '#'
-            boxes: [],                  // Array of boxes etc
+            boxes: {},                  // Array of boxes etc
             numBoxes: 0,                // Set to pages.length after the first JSON response
             nextUp:  -1,
             nextDown: 0,
@@ -53,56 +67,10 @@
             }
         };
 
-        // Give it the index of the pagethat needs a box and it will append it
-        // Index of the page in pagesArray ... not the actual page number or anything
-        var appendBox = function(boxID) {
-            // First make sure the pageID is in range
-            if (!inRange(boxID)) {
-                return false;
-            }
-            
-            // And make sure the box has not already been appended
-            if (boxExists(boxID)) {
-                return false;
-            }
-
-            var thisBox = settings.boxes[boxID];
-            var pageNumber = thisBox.p;
-
-            // 2 pixels of padding on either side (temp solution)
-            var xStart = thisBox.x - 2;
-            var yStart = thisBox.y - 2;
-            var width = thisBox.w + 4;
-            var height = thisBox.h + 4;
-
-
-            if (pageExists(pageNumber)) {
-                // If this box is the "current box" put the border around it
-                var thisClass = (boxID == settings.currentBox) ? ' class="search-box-this"' : '';
-                var toAppend = '<div id="search-box-' + boxID + '"' + thisClass + ' style="width: ' + width + '; height: ' + height + '; left: ' + xStart + '; top: ' + yStart + ';"><div class="' + settings.highlightColour + ' search-box-inner"></div></div>';
-                $('#1-diva-page-' + (pageNumber-1)).append(toAppend);
-                // Figure out if we need to update the first/last pages loaded
-                if (boxID > settings.lastBoxLoaded) {
-                    settings.lastBoxLoaded = boxID;
-                }
-                if (boxID < settings.firstBoxLoaded || settings.firstBoxLoaded === -1) {
-                    settings.firstBoxLoaded = boxID;
-                }
-                // Might as well put it here too
-                handleSearchButtons();
-                return true;
-            } else {
-                return false;
-            }
-    
-            // Return true if it is able to append it
-            // False if it is not
-        };
-
         var loadBoxes = function() {
             updateStatus("Loading results");
             //the 4 in the ajaxURL is the max zoom level * 2. Leaving this as a magic number until I can fix Solr
-            var ajaxURL = '/query/' + settings.query_type + '/' + settings.query + '/' + 4;
+            var ajaxURL = '/query/' + settings.query_type + '/' + settings.query;
             $.ajax({
                 url: ajaxURL,
                 dataType: 'json',
@@ -112,7 +80,8 @@
 
                     // Now make the clear button clickable
                     $('#search-clear').attr('disabled', false);
-                    settings.boxes = data;
+                    settings.boxes = {};
+                    var boxes = data;
                     settings.numBoxes = data.length;
 
                     // Stop trying to do stuff if there are 0 results
@@ -129,8 +98,10 @@
                     {
                         var curBox = data[idx];
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
-                        var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y']};
-                        console.log(dimensionsArr);
+                        var boxID = genUUID();
+                        var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
+                        settings.boxes[boxID] = dimensionsArr;
+
                         if (pIindex == -1) 
                         {
                             pageIndexes.push(curBox['p'] - 1);
@@ -144,9 +115,9 @@
 
                     settings.diva.highlightOnPages(pageIndexes, regions, undefined, 'search-box');
                     
-                    var currentPage = settings.diva.getCurrentPage();
-                    var lastPage = settings.boxes[settings.numBoxes-1].p;
-                    var firstPage = settings.boxes[0].p;
+                    var currentPage = settings.diva.getCurrentPageIndex();
+                    var lastPage = boxes[settings.numBoxes-1].p;
+                    var firstPage = boxes[0].p;
 
                     if (currentPage > lastPage) {
                         // We're below all the boxes
@@ -160,7 +131,7 @@
                         // Some are above, some are below
                         // Go through all the page numbers, figuring out where we are
                         for (i = 0; i < settings.numBoxes; i++) {
-                            var thisBoxPage = settings.boxes[i].p;
+                            var thisBoxPage = boxes[i].p;
 
                             // Find the index of the page right after the current page
                             if (thisBoxPage > currentPage) {
@@ -226,24 +197,25 @@
             settings.oldBox = settings.currentBox;
             settings.currentBox = -1;
             $('#search-clear').attr('disabled', 'disabled');
-            settings.boxes= [];
+            settings.boxes = {};
             settings.numBoxes = 0;
             $('#search-next').attr('disabled', 'disabled');
             $('#search-prev').attr('disabled', 'disabled');
         };
 
         var jumpToBox = function(direction) {
-            var desiredBox = settings.currentBox + direction;
+            /*var desiredBox = settings.currentBox + direction;
 
             // Now figure out the page that box is on
             var desiredPage = settings.boxes[desiredBox].p;
 
-            settings.diva.gotoPageByNumber(desiredPage);
+            settings.diva.gotoPageByNumber(desiredPage, 'top', 'center');
             // Get the height above top for that box
             var boxTop = settings.boxes[desiredBox].y;
-            var currentScrollTop = parseInt($('#1-diva-outer').scrollTop(), 10);
+            console.log(boxTop);
+            //var currentScrollTop = parseInt($('#1-diva-outer').scrollTop(), 10);
             // +250 pixels just to center it a bit or whatever
-            $('#1-diva-outer').scrollTop(boxTop + currentScrollTop - 250);
+            //$('#1-diva-outer').scrollTop(boxTop + currentScrollTop - 250);
             // Now get the horizontal scroll
             var boxLeft = settings.boxes[desiredBox].x;
             $('#1-diva-outer').scrollLeft(boxLeft);
@@ -257,7 +229,7 @@
             updateStatus('', desiredBox + 1);
             settings.currentBox = desiredBox;
             handleSearchButtons();
-            $.updateHashParam('result', desiredBox + 1);
+            $.updateHashParam('result', desiredBox + 1);*/
         };
 
         this.setDocumentViewer = function(diva) {
