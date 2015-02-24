@@ -17,6 +17,7 @@ class RootHandler(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/json")
         self.write(json.dumps({}))
 
+
 class PageHandler(tornado.web.RequestHandler):
     def get(self, pgno):
 
@@ -47,6 +48,7 @@ settings = {
     "cookie_secret": "solesmesnomnomnom"
 }
 
+
 def abs_path(relpath):
     root = conf.APP_ROOT.rstrip("/")
     return r"%s%s" % (root, relpath)
@@ -55,6 +57,7 @@ application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
     (abs_path(r"/page/([0-9]+)?"), PageHandler),
     ], **settings)
+
 
 def main(port):
     server = tornado.httpserver.HTTPServer(application)
