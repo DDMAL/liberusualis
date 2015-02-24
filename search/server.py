@@ -13,20 +13,24 @@ import conf
 
 diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
+
 class SearchHandler(tornado.web.RequestHandler):
-    def get(self, search_type, query, zoom_level):
+    def get(self, search_type, query):
+        print search_type, query
         if not query:
             raise tornado.web.HTTPError(400)
         try:
-            boxes = search.do_query(search_type, query, zoom_level)
+            boxes = search.do_query(search_type, query)
             self.write(json.dumps(boxes))
         except search.LiberSearchException, e:
             raise tornado.web.HTTPError(400)
+
 
 class RootHandler(tornado.web.RequestHandler):
     def get(self):
         app_root = conf.APP_ROOT.rstrip("/")
         self.render("templates/index.html", app_root=app_root, iip_server=conf.IIP_SERVER)
+
 
 class DivaHandler(tornado.web.RequestHandler):
     def get(self):
@@ -41,6 +45,7 @@ settings = {
     "cookie_secret": "nomnomnomnom"
 }
 
+
 def abs_path(relpath):
     root = conf.APP_ROOT.rstrip("/")
     return r"{0}{1}".format(root, relpath)
@@ -48,8 +53,9 @@ def abs_path(relpath):
 application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
     (abs_path(r"/divaserve/?"), DivaHandler),
-    (abs_path(r"/query/(.*)/(.*)/(.*)"), SearchHandler),
+    (abs_path(r"/query/(.*)/(.*)"), SearchHandler),
 ], **settings)
+
 
 def main(port):
     server = tornado.httpserver.HTTPServer(application)
