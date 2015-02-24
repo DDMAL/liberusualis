@@ -16,7 +16,6 @@ diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 class SearchHandler(tornado.web.RequestHandler):
     def get(self, search_type, query):
-        print search_type, query
         if not query:
             raise tornado.web.HTTPError(400)
         try:

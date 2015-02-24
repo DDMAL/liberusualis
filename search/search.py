@@ -21,8 +21,6 @@ class LiberSearchException(Exception):
 def do_query(qtype, query, max_zoom=4):
     query = query.lower()
 
-    print qtype, query
-
     if qtype == "neumes":
         query_stmt = 'neumes:{0}'.format(query.replace(' ', '_'))
     elif qtype == "pnames" or qtype == "pnames-invariant":
@@ -45,9 +43,7 @@ def do_query(qtype, query, max_zoom=4):
     if qtype == "pnames-invariant":
         response = solrconn.query(query_stmt, score=False, sort="pagen asc", q_op="OR", rows=1000000)
     else:
-        print "pre", query_stmt
         response = solrconn.query(query_stmt, score=False, sort="pagen asc", rows=1000000)
-        print "post"
     numfound = response.numFound
 
     results = []

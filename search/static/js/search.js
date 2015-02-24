@@ -101,6 +101,7 @@ function genUUID()
                         var boxID = genUUID();
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
                         settings.boxes[boxID] = dimensionsArr;
+                        curBox.UUID = boxID;
 
                         if (pIindex == -1) 
                         {
@@ -145,10 +146,14 @@ function genUUID()
                     // Jump to the first result OR the result specified in the URL
                     if (settings.firstRequest) {
                         desiredResult = parseInt($.getHashParam('result'), 10);
+                        var result;
                         if (desiredResult === NaN || !inRange(desiredResult - 1)) {
-                            jumpToBox(1);
+                            result = settings.diva.gotoHighlight(boxes[0].UUID);
                         } else {
-                            jumpToBox(desiredResult);
+                            result = settings.diva.gotoHighlight(boxes[desiredResult].UUID);
+                        }
+                        if (!result) {
+                            updateStatus("Invalid URL - can't find the sequence you asked for.");
                         }
                         settings.firstRequest = false;
                     } else {
@@ -337,7 +342,7 @@ function genUUID()
             });
 
             $('#search-next').click(function() {
-                jumpToBox(1);
+                settings.diva.gotoNextHighlight();
             });
         };
         
