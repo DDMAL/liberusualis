@@ -98,7 +98,7 @@ function genUUID()
                     {
                         var curBox = data[idx];
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
-                        var boxID = genUUID();
+                        var boxID = curBox['id'] || genUUID();
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
                         settings.boxes[boxID] = dimensionsArr;
                         curBox.UUID = boxID;
@@ -114,6 +114,7 @@ function genUUID()
                         }
                     }
 
+                    settings.diva.resetHighlights();
                     settings.diva.highlightOnPages(pageIndexes, regions, undefined, 'search-box');
                     
                     var currentPage = settings.diva.getCurrentPageIndex();
