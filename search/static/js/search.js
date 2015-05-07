@@ -23,18 +23,13 @@ function genUUID()
 
         // Cannot be changed
         var globals = {
-            firstPage: 0,              // The first page included in query (currentpage-20ish)
-            firstRequest: true,         // For each query
-            lastPage: 0,               // The last page included in query (currentpage+20ish)
             query: '',                  // The search query, saved in ajaxRequest()
             queryType: '',              // The type - text, pnames, etc
             diva: null,                 // The object reference
             elementSelector: '',        // Set in init(); the ID of the element plus '#'
             boxes: {},                  // Array of boxes etc
             orderedBoxes: [],
-            numBoxes: 0,                // Set to pages.length after the first JSON response
-            nextUp:  -1,
-            nextDown: 0,
+            numBoxes: 0,                // Set to orderedBoxes.length after the first JSON response
             oldBox: 0,
             currentBox: -1,
             zoomLevel: 0               // Set to the current zoom level of the document viewer
@@ -64,6 +59,7 @@ function genUUID()
                     // Now make the clear button clickable
                     $('#search-clear').attr('disabled', false);
                     settings.boxes = {};
+                    settings.orderedBoxes = [];
                     var boxes = data;
 
                     // Stop trying to do stuff if there are 0 results
@@ -101,56 +97,19 @@ function genUUID()
                     settings.numBoxes = settings.orderedBoxes.length;
                     updateStatus("Result <span id='curBox'></span> of " + settings.numBoxes + " for " + settings.query);
 
-                    var currentPage = settings.diva.getCurrentPageIndex();
-                    var lastPage = boxes[settings.numBoxes-1].p;
-                    var firstPage = boxes[0].p;
-
-                    if (currentPage > lastPage) {
-                        // We're below all the boxes
-                        settings.nextDown = settings.numBoxes;
-                        settings.nextUp = settings.numBoxes - 1;
-                    } else if (currentPage < firstPage) {
-                        // We're above all the boxes
-                        settings.nextDown = 0;
-                        settings.nextUp = -1;
-                    } else {
-                        // Some are above, some are below
-                        // Go through all the page numbers, figuring out where we are
-                        for (i = 0; i < settings.numBoxes; i++) {
-                            var thisBoxPage = boxes[i].p;
-
-                            // Find the index of the page right after the current page
-                            if (thisBoxPage > currentPage) {
-                                settings.nextDown = i;
-                                settings.nextUp = i - 1;
-                                break;
-                            }
-                        }
-                    }
-
                     // Jump to the first result OR the result specified in the URL
-                    if (settings.firstRequest) {
-                        var desiredResult = parseInt($.getHashParam('result'), 10);
-                        var result;
-                        
-                        if (desiredResult === NaN || !inRange(desiredResult - 1))
-                            result = settings.diva.gotoHighlight(settings.orderedBoxes[0]);
-                        else
-                            result = settings.diva.gotoHighlight(settings.orderedBoxes[desiredResult]);
-                        
-                        if (!result)
-                            updateStatus("Invalid URL - can't find the sequence you asked for.");
-                        else
-                            updateBoxNumber(result);
-                        
-                        settings.firstRequest = false;
-                    } else {
-                        settings.currentBox = settings.oldBox;
-                        // Pretend we're still on the same box
-                        updateBoxNumber(settings.oldBox + 1);
-                        // Highlight that box
-                        $('#search-box-' + settings.oldBox).addClass('search-box-this');
-                    }
+                    var desiredResult = parseInt($.getHashParam('result'), 10);
+                    var result;
+                    
+                    if (desiredResult === NaN || !inRange(desiredResult - 1))
+                        result = settings.diva.gotoHighlight(settings.orderedBoxes[0]);
+                    else
+                        result = settings.diva.gotoHighlight(settings.orderedBoxes[desiredResult]);
+                    
+                    if (!result)
+                        updateStatus("Invalid URL - can't find the sequence you asked for.");
+                    else
+                        updateBoxNumber(result);
 
                     //handleSearchButtons();
                     $('#search-prev').removeAttr('disabled');
@@ -166,8 +125,6 @@ function genUUID()
         // Called initially as well - sets it to no results etc
         var clearResults = function() {
             $('[id^=search-box-]').remove();
-            settings.nextUp = -1;
-            settings.nextDown = 0;
             settings.oldBox = settings.currentBox;
             settings.currentBox = -1;
             $('#search-clear').attr('disabled', 'disabled');
@@ -222,25 +179,11 @@ function genUUID()
             }
         });
 
-        // Called when a user clicks a colour
-        var handleColourChange = function(newColour) {
-            // Now change the colour of any existing boxes
-            $('div[id^=search-box-] > div').removeClass(settings.highlightColour).addClass(newColour);
-
-            // Make the old colour look not selected
-            $('.' + settings.highlightColour).removeClass('selected');
-            // And make the new one look selected
-            $('.' + newColour).addClass('selected');
-
-            settings.highlightColour = newColour;
-        };
-
         var handleEvents = function() {
             // Now handle the search box clicking
             $('#search-input').submit(function() {
                 settings.query = $('#search-query').val();
                 settings.query_type = $('#search-type option:selected').attr('name');
-                settings.firstRequest = true;
                 
                 // Update the hash params in the URL
                 $.updateHashParam('type', settings.query_type);
@@ -270,7 +213,14 @@ function genUUID()
                 var isSelected = $(this).hasClass('selected');
                 if (!isSelected) {
                     var newColour = $(this).attr('class');
-                    handleColourChange(newColour);
+                    // Now change the colour of any existing boxes
+                    $("." + settings.diva.getInstanceId() + "highlight").css({'background-color': $(this).attr('data-css')});
+                    // Make the old colour look not selected
+                    $('.' + settings.highlightColour).removeClass('selected');
+                    // And make the new one look selected
+                    $('.' + newColour).addClass('selected');
+
+                    settings.highlightColour = newColour;
                 }
             });
 
@@ -304,8 +254,35 @@ function genUUID()
             settings.elementSelector = '#' + $(element).attr('id');
             
             // Now create all the divs and such
-            $(settings.elementSelector).append('<form id="search-input"><input type="text" id="search-query" size="25" /><select id="search-type" name="search-type"><option name="neumes">Neumes</option><option name="pnames" selected="selected">Strict pitch sequence</option><option name="pnames-invariant">Transposed pitch sequence</option><option name="contour">Contour</option><option name="intervals">Intervals</option><option name="text">Text</option><option name="incipit">Incipit</option></select><input type="submit" id="search-go" value="Search" /><input type="button" id="search-clear" value="Clear" disabled="disabled" /><ul id="search-colours"><li class="colour-red"></li><li class="colour-orange"></li><li class="colour-yellow"></li><li class="colour-green"></li><li class="colour-blue"></li><li class="colour-purple"></li></ul></form>');
-            $(settings.elementSelector).append('<div id="search-controls"><input type="button" id="search-prev" value="previous" disabled="disabled" /><div id="search-status"></div><input type="button" id="search-next" value="next" disabled="disabled" /></div>');
+            $(settings.elementSelector).append(
+                '<form id="search-input">' +
+                    '<input type="text" id="search-query" size="25" />' +
+                    '<select id="search-type" name="search-type">' +
+                        '<option name="neumes">Neumes</option>' +
+                        '<option name="pnames" selected="selected">Strict pitch sequence</option>' +
+                        '<option name="pnames-invariant">Transposed pitch sequence</option>' +
+                        '<option name="contour">Contour</option>' +
+                        '<option name="intervals">Intervals</option>' +
+                        '<option name="text">Text</option>' +
+                        '<option name="incipit">Incipit</option>' +
+                    '</select>' +
+                    '<input type="submit" id="search-go" value="Search" />' +
+                    '<input type="button" id="search-clear" value="Clear" disabled="disabled" />' +
+                    '<ul id="search-colours">' +
+                        '<li class="colour-red" data-css="rgb(255, 0, 0, 0.2)"></li>' +
+                        '<li class="colour-orange" data-css="rgb(248, 128, 13, 0.2)"></li>' +
+                        '<li class="colour-yellow" data-css="rgb(255, 255, 0, 0.2)"></li>' +
+                        '<li class="colour-green" data-css="rgb(125, 255, 23, 0.2)"></li>' +
+                        '<li class="colour-blue" data-css="rgb(92, 179, 255, 0.2)"></li>' +
+                        '<li class="colour-purple" data-css="rgb(141, 56, 201, 0.2)"></li>' +
+                    '</ul>' +
+                '</form>');
+            $(settings.elementSelector).append(
+                '<div id="search-controls">' +
+                    '<input type="button" id="search-prev" value="previous" disabled="disabled" />' +
+                    '<div id="search-status"></div>' +
+                    '<input type="button" id="search-next" value="next" disabled="disabled" />' +
+                '</div>');
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');
 
