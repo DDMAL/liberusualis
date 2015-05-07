@@ -29,10 +29,7 @@ function genUUID()
             elementSelector: '',        // Set in init(); the ID of the element plus '#'
             boxes: {},                  // Array of boxes etc
             orderedBoxes: [],
-            numBoxes: 0,                // Set to orderedBoxes.length after the first JSON response
-            oldBox: 0,
-            currentBox: -1,
-            zoomLevel: 0               // Set to the current zoom level of the document viewer
+            numBoxes: 0                // Set to orderedBoxes.length after the first JSON response
         };
 
         $.extend(settings, globals);
@@ -92,10 +89,10 @@ function genUUID()
                     }
 
                     settings.diva.resetHighlights();
-                    settings.diva.highlightOnPages(pageIndexes, regions, undefined, 'search-box');
+                    settings.diva.highlightOnPages(pageIndexes, regions, undefined);
 
                     settings.numBoxes = settings.orderedBoxes.length;
-                    updateStatus("Result <span id='curBox'></span> of " + settings.numBoxes + " for " + settings.query);
+                    updateStatus("Result <span id='curBox'></span> of " + settings.numBoxes + " for " + settings.query + ".");
 
                     // Jump to the first result OR the result specified in the URL
                     var desiredResult = parseInt($.getHashParam('result'), 10);
@@ -117,18 +114,17 @@ function genUUID()
                 },
                 error: function() {
                     // The server will return a 404 if the query is invalid
-                    updateStatus("Invalid query");
+                    updateStatus("Invalid query.");
                 }
             });
         };
 
         // Called initially as well - sets it to no results etc
         var clearResults = function() {
-            $('[id^=search-box-]').remove();
-            settings.oldBox = settings.currentBox;
-            settings.currentBox = -1;
+            settings.diva.resetHighlights();
             $('#search-clear').attr('disabled', 'disabled');
             settings.boxes = {};
+            settings.orderedBoxes = [];
             settings.numBoxes = 0;
             $('#search-next').attr('disabled', 'disabled');
             $('#search-prev').attr('disabled', 'disabled');
@@ -226,12 +222,10 @@ function genUUID()
 
             // Handle clicking the prev / next buttons
             $('#search-prev').click(function() {
-                settings.currentBox -= 1;
                 updateBoxNumber(settings.diva.gotoPreviousHighlight());
             });
 
             $('#search-next').click(function() {
-                settings.currentBox += 1;
                 updateBoxNumber(settings.diva.gotoNextHighlight());
             });
         };
@@ -239,7 +233,7 @@ function genUUID()
         var updateStatus = function(message) {
             if (!message) {
                 // Display the default message (we're not in search)
-                $('#search-status').text('Enter a search query');
+                $('#search-status').text('Enter a search query.');
             } else {
                 $('#search-status').html(message);
             }
