@@ -31,6 +31,7 @@ function genUUID()
             diva: null,                 // The object reference
             elementSelector: '',        // Set in init(); the ID of the element plus '#'
             boxes: {},                  // Array of boxes etc
+            orderedBoxes: [],
             numBoxes: 0,                // Set to pages.length after the first JSON response
             nextUp:  -1,
             nextDown: 0,
@@ -43,24 +44,6 @@ function genUUID()
 
         var inRange = function(boxID) {
             if (boxID >= 0 && boxID < settings.numBoxes) {
-                return true;
-            } else {
-                return false;
-            }
-        };
-        
-        // Check if a page is visible in the dom
-        var pageExists = function(pageNumber) {
-            var pageIndex = pageNumber - 1;
-            if ($('#1-diva-page-' + pageIndex).length > 0) {
-                return true;
-            } else {
-                return false;
-            }
-        };
-
-        var boxExists = function(boxIndex) {
-            if ($('#search-box-' + boxIndex).length > 0) {
                 return true;
             } else {
                 return false;
@@ -82,15 +65,12 @@ function genUUID()
                     $('#search-clear').attr('disabled', false);
                     settings.boxes = {};
                     var boxes = data;
-                    settings.numBoxes = data.length;
 
                     // Stop trying to do stuff if there are 0 results
-                    if (settings.numBoxes === 0) {
+                    if (data.length === 0) {
                         updateStatus("No results for " + settings.query);
                         return;
                     }
-
-                    updateStatus("Result <span></span> of " + settings.numBoxes + " for " + settings.query);
 
                     var pageIndexes = [];
                     var regions = [];
@@ -102,6 +82,7 @@ function genUUID()
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
                         settings.boxes[boxID] = dimensionsArr;
                         curBox.UUID = boxID;
+                        if(settings.orderedBoxes.indexOf(boxID) == -1) settings.orderedBoxes.push(boxID);
 
                         if (pIindex == -1) 
                         {
@@ -116,7 +97,10 @@ function genUUID()
 
                     settings.diva.resetHighlights();
                     settings.diva.highlightOnPages(pageIndexes, regions, undefined, 'search-box');
-                    
+
+                    settings.numBoxes = settings.orderedBoxes.length;
+                    updateStatus("Result <span id='curBox'></span> of " + settings.numBoxes + " for " + settings.query);
+
                     var currentPage = settings.diva.getCurrentPageIndex();
                     var lastPage = boxes[settings.numBoxes-1].p;
                     var firstPage = boxes[0].p;
@@ -146,53 +130,37 @@ function genUUID()
 
                     // Jump to the first result OR the result specified in the URL
                     if (settings.firstRequest) {
-                        desiredResult = parseInt($.getHashParam('result'), 10);
+                        var desiredResult = parseInt($.getHashParam('result'), 10);
                         var result;
-                        if (desiredResult === NaN || !inRange(desiredResult - 1)) {
-                            result = settings.diva.gotoHighlight(boxes[0].UUID);
-                        } else {
-                            result = settings.diva.gotoHighlight(boxes[desiredResult].UUID);
-                        }
-                        if (!result) {
+                        
+                        if (desiredResult === NaN || !inRange(desiredResult - 1))
+                            result = settings.diva.gotoHighlight(settings.orderedBoxes[0]);
+                        else
+                            result = settings.diva.gotoHighlight(settings.orderedBoxes[desiredResult]);
+                        
+                        if (!result)
                             updateStatus("Invalid URL - can't find the sequence you asked for.");
-                        }
+                        else
+                            updateBoxNumber(result);
+                        
                         settings.firstRequest = false;
                     } else {
                         settings.currentBox = settings.oldBox;
                         // Pretend we're still on the same box
-                        updateStatus('', settings.oldBox + 1);
+                        updateBoxNumber(settings.oldBox + 1);
                         // Highlight that box
                         $('#search-box-' + settings.oldBox).addClass('search-box-this');
                     }
 
-                    handleSearchButtons();
+                    //handleSearchButtons();
+                    $('#search-prev').removeAttr('disabled');
+                    $('#search-next').removeAttr('disabled');
                 },
                 error: function() {
                     // The server will return a 404 if the query is invalid
                     updateStatus("Invalid query");
                 }
             });
-        };
-
-        var handleSearchButtons = function() {
-            var prevDisabled = $('#search-prev').attr('disabled');
-            var nextDisabled = $('#search-next').attr('disabled');
-
-            if (!inRange(settings.currentBox-1) && !prevDisabled) {
-                $('#search-prev').attr('disabled', 'disabled');
-            }
-
-            if (inRange(settings.currentBox-1) && prevDisabled) {
-                $('#search-prev').removeAttr('disabled');
-            }
-
-            if (!inRange(settings.currentBox+1) && !nextDisabled) {
-                $('#search-next').attr('disabled', 'disabled');
-            }
-
-            if (inRange(settings.currentBox+1) && nextDisabled) {
-                $('#search-next').removeAttr('disabled');
-            }
         };
 
         // Called initially as well - sets it to no results etc
@@ -207,35 +175,6 @@ function genUUID()
             settings.numBoxes = 0;
             $('#search-next').attr('disabled', 'disabled');
             $('#search-prev').attr('disabled', 'disabled');
-        };
-
-        var jumpToBox = function(direction) {
-            /*var desiredBox = settings.currentBox + direction;
-
-            // Now figure out the page that box is on
-            var desiredPage = settings.boxes[desiredBox].p;
-
-            settings.diva.gotoPageByNumber(desiredPage, 'top', 'center');
-            // Get the height above top for that box
-            var boxTop = settings.boxes[desiredBox].y;
-            console.log(boxTop);
-            //var currentScrollTop = parseInt($('#1-diva-outer').scrollTop(), 10);
-            // +250 pixels just to center it a bit or whatever
-            //$('#1-diva-outer').scrollTop(boxTop + currentScrollTop - 250);
-            // Now get the horizontal scroll
-            var boxLeft = settings.boxes[desiredBox].x;
-            $('#1-diva-outer').scrollLeft(boxLeft);
-            // Will include the padding between pages for best results
-
-            // Make the border change etc
-            $('div[id^="search-box-"]').removeClass('search-box-this');
-            $('#search-box-' + desiredBox).addClass('search-box-this');
-
-            // For the box number, not the box index
-            updateStatus('', desiredBox + 1);
-            settings.currentBox = desiredBox;
-            handleSearchButtons();
-            $.updateHashParam('result', desiredBox + 1);*/
         };
 
         this.setDocumentViewer = function(diva) {
@@ -306,7 +245,7 @@ function genUUID()
                 // Update the hash params in the URL
                 $.updateHashParam('type', settings.query_type);
                 $.updateHashParam('query', settings.query);
-                $.updateHashParam('result', 1);
+                $.updateHashParam('result', 0);
 
                 loadBoxes();
 
@@ -320,9 +259,7 @@ function genUUID()
                 $('#search-query').val('');
 
                 // Remove all the hash params
-                $.removeHashParam('result');
-                $.removeHashParam('query');
-                $.removeHashParam('type');
+                history.replaceState("", "", window.location.href.split("#")[0]);
                 updateStatus();
                 clearResults();
             });
@@ -339,25 +276,28 @@ function genUUID()
 
             // Handle clicking the prev / next buttons
             $('#search-prev').click(function() {
-                jumpToBox(-1);
+                settings.currentBox -= 1;
+                updateBoxNumber(settings.diva.gotoPreviousHighlight());
             });
 
             $('#search-next').click(function() {
-                settings.diva.gotoNextHighlight();
+                settings.currentBox += 1;
+                updateBoxNumber(settings.diva.gotoNextHighlight());
             });
         };
         
-        var updateStatus = function(message, boxNumber) {
-            if (boxNumber) {
-                $('#search-status span').text(boxNumber);
-                return;
-            }
+        var updateStatus = function(message) {
             if (!message) {
                 // Display the default message (we're not in search)
                 $('#search-status').text('Enter a search query');
             } else {
                 $('#search-status').html(message);
             }
+        };
+
+        var updateBoxNumber = function(boxID) {
+            var boxNumber = settings.orderedBoxes.indexOf(boxID) + 1;
+            $('#curBox').text(boxNumber);
         };
 
         var init = function() {

@@ -57,7 +57,7 @@ def do_query(qtype, query, max_zoom=4):
     for d in response:
         page_number = d['pagen']
         locations = json.loads(d['location'].replace("'", '"'))
-        box_id = d['id']
+        box_id = "m-" + d['id']
 
         if isinstance(locations, types.DictType):
             box_w = locations['width']
