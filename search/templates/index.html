@@ -2,24 +2,21 @@
 <head>
     <title>Search the Liber Usualis</title>
 
-    <link rel="stylesheet" href="{{app_root}}{{static_url("css/single.css")}}" type="text/css" />
-    <link rel="stylesheet" href="{{app_root}}{{static_url("css/diva.min.css")}}" type="text/css" />
+    <link rel="stylesheet" href="{{app_root}}{{static_url("diva.js/build/css/diva.css")}}" type="text/css" />
     <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" type="text/css" />
-    <link href='http://fonts.googleapis.com/css?family=Gentium+Basic:400,700' rel='stylesheet' type='text/css'>
 
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
-    <!--<script src="{{app_root}}{{static_url("js/diva-utils.js")}}" type="text/javascript"></script>-->
-    <script src="{{app_root}}{{static_url("js/diva.js")}}" type="text/javascript"></script>
-    <script src="{{app_root}}{{static_url("js/utils.js")}}" type="text/javascript"></script>
-    <script src="{{app_root}}{{static_url("js/plugins/highlight.js")}}" type="text/javascript"></script>
+    <script src="{{app_root}}{{static_url("diva.js/source/js/diva.js")}}" type="text/javascript"></script>
+    <script src="{{app_root}}{{static_url("diva.js/source/js/utils.js")}}" type="text/javascript"></script>
+    <script src="{{app_root}}{{static_url("diva.js/source/js/plugins/highlight.js")}}" type="text/javascript"></script>
 
     <style type="text/css">
     
     body {
         background: url("{{app_root}}{{static_url("img/blackleather.jpg")}}") repeat;
-        font-family: 'Gentium Basic', serif;
-        font-size: 1.2em;
+        font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 1em;
         color: #fff;
     }
     
@@ -45,6 +42,12 @@
         background: #fff;
     }
     
+    #diva-wrapper {
+        position: relative;
+        width: 960px;
+        margin: 0 auto;
+    }
+
     div[id$="diva-inner"] {
         background: url("{{app_root}}{{static_url("img/seamlesspaper1.jpg")}}") repeat;
     }
@@ -61,17 +64,6 @@
         position: absolute;
         z-index: 7000;
         border: 2px solid transparent;
-    }
-
-    .search-box-inner {
-        width: 100%;
-        height: 100%;
-        opacity: 0.25;
-    }
-
-    /* The "current" search box */
-    .search-box-this {
-        border: 2px solid #555 !important;
     }
 
     #search-colours {
@@ -131,16 +123,20 @@
         left: 50%;
         margin-left: -410px;
         z-index: 19500 !important;
-        width: 750px;
+        width: 825px;
         height: 76px;
         text-align: center;
+    }
+
+    .in-fullscreen {
+        font-size:0.8em;
+        color:#000;
     }
     </style>
 </head>
 <body>
     <div class="center" id="search-wrapper">
-        <span class="small-title">Search the</span><br />
-        <h1>Liber usualis</h1>
+        <span class="small-title">Search the Liber Usualis</span><br />
         <p>What is this? <a href="http://ddmal.music.mcgill.ca/research/omr/Search_the_Liber_Usualis">Find out more about what we are trying to do.</a></p>
     </div>
     <br />
@@ -149,6 +145,7 @@
 	<p class="center">Hosted by the <a href="http://ddmal.music.mcgill.ca">Distributed Digital Music Archives &amp; Libraries Lab</a> of McGill University. <a href="mailto:andrew.hankinson@mail.mcgill.ca,ich@music.mcgill.ca,andrew.horwitz@mail.mcgill.ca">Contact us with questions or comments</a></p>
     <script src="{{app_root}}{{static_url("js/search.js")}}"></script>
     <script>
+
     $(document).ready(function() {
         $('#diva-wrapper').diva({
             zoomLevel: 0,
