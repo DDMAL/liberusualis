@@ -153,7 +153,7 @@ function genUUID()
         {
             if (inFullscreen)
             {
-            // The searchbar that appears at the top in fullscreen mode
+                // The searchbar that appears at the top in fullscreen mode
                 $('body').append('<div id="search-bar" class="ui-widget ui-widget-content ui-corner-all ui-state-highlight"></div>');
                 $('#search-bar').append($('#search-input').remove());
                 $('#search-bar').append($('#search-controls').remove());
