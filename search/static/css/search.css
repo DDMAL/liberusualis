@@ -1,0 +1,135 @@
+
+body {
+    /*background: url("{{app_root}}{{static_url("img/blackleather.jpg")}}") repeat;*/
+    /*font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1em;*/
+    background: #fff;
+}
+
+h1 {
+    font-weight: normal;
+    font-size: 4em;
+    padding: 0;
+    margin: 0;
+}
+
+.small-title {
+    font-size: 2em;
+    padding: 0em;
+    margin: 0em;
+}
+
+.spanning {
+    padding: 0% 1%;
+}
+
+#diva-wrapper {
+    position: relative;
+    height:calc(85% - 50px);
+    margin: 0 auto;
+}
+
+#search-wrapper {
+    padding-top:18px;
+}
+
+.diva-goto-form > input {
+    line-height: 1.9em;
+    position:relative;
+    top: -1px;
+}
+
+.diva-tools .diva-tools-right .diva-page-nav .diva-goto-form .diva-input {
+    width: 50px;
+}
+
+div[id$="diva-inner"] {
+    background: url("{{app_root}}{{static_url("img/seamlesspaper1.jpg")}}") repeat;
+}
+
+div[id$="diva-outer"] {
+    height: 600px; /*changed immediately on load or resize */
+}
+
+.center {
+    text-align: center;
+}
+
+div[id^=search-box] {
+    position: absolute;
+    z-index: 7000;
+    border: 2px solid transparent;
+}
+
+#search-colours {
+    list-style-type: none;
+    display: inline;
+    padding-left: 10px;
+    position: relative;
+    top: 3px;
+}
+
+#search-colours li {
+    vertical-align: text-bottom;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+}
+
+#search-colours .selected {
+    border: 2px solid #000;
+}
+
+.colour-red {
+    background-color: #FF0000;
+}
+
+.colour-orange {
+    background-color: #F88017;
+}
+
+.colour-yellow {
+    background-color: #FFFF00;
+}
+
+.colour-green {
+    background-color: #B1FB17;
+}
+
+.colour-blue {
+    background-color: #5CB3FF;
+}
+
+.colour-purple {
+    background-color: #8D38C9;
+}
+
+#search-status {
+    display: inline-block;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+#search-bar {
+    position: absolute;
+    bottom: 0px;
+    left: 50%;
+    margin-left: -410px;
+    z-index: 19500 !important;
+    width: 825px;
+    height: 76px;
+    text-align: center;
+}
+
+#search-prev {
+    float: left;
+}
+#search-next {
+    float: right;
+}
+
+.in-fullscreen {
+    font-size:0.8em;
+    color:#000;
+}

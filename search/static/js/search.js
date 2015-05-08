@@ -262,6 +262,7 @@ function genUUID()
                     '</select>' +
                     '<input type="submit" id="search-go" value="Search" />' +
                     '<input type="button" id="search-clear" value="Clear" disabled="disabled" />' +
+                    '<br> Highlight colour:' +
                     '<ul id="search-colours">' +
                         '<li class="colour-red" data-css="rgb(255, 0, 0, 0.2)"></li>' +
                         '<li class="colour-orange" data-css="rgb(248, 128, 13, 0.2)"></li>' +
