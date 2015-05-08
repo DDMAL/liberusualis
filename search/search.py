@@ -58,20 +58,27 @@ def do_query(qtype, query, max_zoom=4):
         page_number = d['pagen']
         locations = json.loads(d['location'].replace("'", '"'))
         box_id = "m-" + d['id']
+        search_data = {
+            'semitones': d['semitones'],
+            'pnames': d['pnames'],
+            'neumes': d['neumes'],
+            'contour': d['contour'],
+            'intervals': d['intervals']
+        }
 
         if isinstance(locations, types.DictType):
             box_w = locations['width']
             box_h = locations['height']
             box_x = locations['ulx']
             box_y = locations['uly']
-            boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id})
+            boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id, 'results': search_data})
         else:
             for location in locations:
                 box_w = location['width']
                 box_h = location['height']
                 box_x = location['ulx']
                 box_y = location['uly']
-                boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id})
+                boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id, 'results': search_data})
 
     boxes_sorted = sorted(boxes, key=itemgetter('p', 'y'))
 

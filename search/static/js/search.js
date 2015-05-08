@@ -70,6 +70,11 @@ function genUUID()
                     for (idx in data)
                     {
                         var curBox = data[idx];
+                        for (x in curBox.results)
+                        {
+                            $("#search-results").append(x + ": " + curBox.results[x] + "<br>");
+                        }
+                        $("#search-results").append("<br>");
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
                         var boxID = curBox['id'] || genUUID();
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
@@ -277,7 +282,8 @@ function genUUID()
                     '<input type="button" id="search-prev" value="previous" disabled="disabled" />' +
                     '<div id="search-status"></div>' +
                     '<input type="button" id="search-next" value="next" disabled="disabled" />' +
-                '</div>');
+                '</div>' +
+                '<div id="search-results"></div>');
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');
 
