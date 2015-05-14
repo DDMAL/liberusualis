@@ -61,7 +61,7 @@
                 * Contour: The "Parsons code": u(p), d(own), and r(epeat), e.g., "uuddrrd".<br />
                 * Intervals: Number of semitones +/-, e.g., "+2 +2 +3 -1 -1 +2".<br />
                 * Text: OCR'ed text results, e.g., "alleluia", "pastor". Note: The OCR results are very poor. </p>
-                <p>Search results will be highlighted on the original page images below the search box. You can use the "next" and "previous" buttons to step through the results. </p>
+                <p>Search results will be highlighted on the original page images alongside the search results. You can use the "next" and "previous" buttons to step through the results. </p>
                 <p>The current search supports sequences up to a length of 10 for all musical queries. Note that this means that for the pitch sequences this is a length of 10, but for the contour and intervals it is a maximum length of 9.</p>
               </div>
               <div class="modal-footer">
@@ -120,8 +120,12 @@
         {
             if(dv.getState().f) return; //don't do this in fullscreen
             $("#html_body").offset({'top': $("#navbar_header").height()});
+            $("#html_body").height($(window).height() - $("#html_body").offset().top);
+            $("#diva-wrapper").offset({'top': $("#navbar_header").height()});
+            $("#diva-wrapper").height($("#html_body").height() - 10); //10 for padding
+            $("#search-wrapper").height($("#diva-wrapper").height());
             $("#search-wrapper").offset({'top': $("#navbar_header").height()});
-            $("#diva-wrapper").height($(window).height() - $("#html_body").offset().top - 20);
+            $("#search-results").height($("#html_body").height() - $("#search-header").height() - 20);
             $(".diva-outer").height($("#diva-wrapper").height() - 44); //for toolbar
         }
         $('#diva-wrapper').diva({
@@ -136,7 +140,7 @@
             objectData: '{{static_url("liber.json")}}'
         });
         $('#search-wrapper').search({
-            highlightColour: 'colour-orange'
+            highlightColour: 'colour-red'
         });
 
         diva.Events.subscribe("ViewerDidLoad", function(){

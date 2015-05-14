@@ -13,6 +13,10 @@ h1 {
     margin: 0;
 }
 
+#html_body {
+    background-color: rgb(245, 245, 245);
+}
+
 .small-title {
     font-size: 2em;
     padding: 0em;
@@ -27,10 +31,18 @@ h1 {
     position: relative;
     height:calc(85% - 50px);
     margin: 0 auto;
+    padding: 5px;
+}
+
+#diva-wrapper > .diva-tools {
+    margin-top:0px;
 }
 
 #search-wrapper {
-    padding-top:18px;
+    padding:5px;
+}
+#search-results {
+    overflow-y: scroll;
 }
 
 .diva-goto-form > input {
@@ -147,25 +159,58 @@ div[id^=search-box] {
 
 #search-results {
     padding-top:10px;
+    width:100%;
+}
+
+tbody {
+    width:100%;
 }
 
 #search-results-header {
     border-bottom: thin black solid;
+    font-size:12pt;
+    padding:0px 10px 5px 10px;
 }
 
-#search-results-header > td {
-    padding:5px 10px;
+#search-results-header > span {
+    display:inline-block;
+}
+
+#search-results > div > span:first-child {
+    width:20%;
+    display:inline-block;
+}
+
+#search-results .selected {
+    border: 1px solid #000;
 }
 
 .search-result:nth-child(even) {
-    background: rgba(255, 0, 0, 0.1);
+    background: rgba(255, 0, 0, 0.2);
 }
 
-.search-result {
+.search-result{
+    width:100%;
     font-size:11pt;
+    border-top: thin gray solid;
+    border-left: thin transparent solid;
+    border-right: thin transparent solid;
     border-bottom: thin gray solid;
+    padding: 10px;
 }
 
-.search-result > td {
-    padding:5px 10px;
+.search-result-expanded {
+    padding-top:10px;
+    display: none;
+}
+
+.buttonContainer {
+    margin:auto;
+    display:block;
+    float:right;
+}
+
+.buttonContainer > button{
+    font-size:11pt;
+    float:right;
 }

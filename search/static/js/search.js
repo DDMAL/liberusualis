@@ -42,13 +42,44 @@ function genUUID()
             }
         };
 
-        var curResultNum = 1;
         var addResult = function(resultID, pageNum, result){
-            $("#search-results").append("<tr class='search-result' data-result-id=" + resultID + ">" + 
-                '<td>' + pageNum + "</td><td>" + result.pnames + "</td>" +
-                '</tr><br>');
-            curResultNum += 1;
+            $("#search-results").append("<div class='search-result' data-result-id='" + resultID + "'>" + 
+                '<span>' + pageNum + "</span><span>" + result.pnames + "</span>" +
+                '<span class="buttonContainer"><button class="gotoButton">Go to</button><button class="moreInfoButton">More info</button></span>' +
+                '<div class="search-result-expanded" data-result-id="' + resultID + '">' +
+                    '<div>' +
+                    'Contour: ' + result.contour + '<br>' +
+                    'Semitones: (' +  result.semitones.replace(/_/g, ', ') +')<br>' +
+                    'Intervals: (' +  result.intervals.replace(/_/g, ', ') +')<br>' +
+                    'Neumes: (' +  result.neumes.replace(/_/g, ', ') +')<br>' +
+                    '</div>' +
+                '</div>' +
+                '</div>');
+
+            //unbind it first to make sure we're not binding them on an arbitrary number of times
+            $(".gotoButton").unbind('click', gotoClick);
+            $(".gotoButton").on('click', gotoClick);
+            $(".moreInfoButton").unbind('click', infoClick);
+            $(".moreInfoButton").on('click', infoClick);
         };
+
+        function gotoClick(e)
+        {
+            settings.diva.gotoHighlight(e.target.closest(".search-result").getAttribute('data-result-id'));
+        }
+
+        function infoClick(e)
+        {
+            var dataID = e.target.closest(".search-result").getAttribute('data-result-id');
+            $(".search-result-expanded[data-result-id=" + dataID + "]").slideToggle();
+        }
+
+        diva.Events.subscribe("SelectedHighlightChanged", function(highlightID, highlightPage)
+        {
+            $(".search-result.selected").removeClass("selected");
+            $(".search-result[data-result-id=" + highlightID + "]").addClass("selected");
+            updateBoxNumber(highlightID);
+        });
 
         var loadBoxes = function() {
             updateStatus("Loading results");
@@ -83,7 +114,11 @@ function genUUID()
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
                         settings.boxes[boxID] = dimensionsArr;
                         curBox.UUID = boxID;
-                        if(settings.orderedBoxes.indexOf(boxID) == -1) settings.orderedBoxes.push(boxID);
+                        if(settings.orderedBoxes.indexOf(boxID) == -1)
+                        {
+                            settings.orderedBoxes.push(boxID);
+                            addResult(boxID, curBox['p'], curBox.results);
+                        } 
 
                         if (pIindex == -1) 
                         {
@@ -94,8 +129,6 @@ function genUUID()
                         {
                             regions[pIindex].push(dimensionsArr);
                         }
-
-                        addResult(boxID, curBox['p'], curBox.results);
                     }
 
                     settings.diva.resetHighlights();
@@ -140,7 +173,6 @@ function genUUID()
             $('#search-prev').attr('disabled', 'disabled');
 
             $(".search-result").remove();
-            curResultNum = 1;
         };
 
         this.setDocumentViewer = function(diva) {
@@ -224,6 +256,8 @@ function genUUID()
                     var newColour = $(this).attr('class');
                     // Now change the colour of any existing boxes
                     $("." + settings.diva.getInstanceId() + "highlight").css({'background-color': $(this).attr('data-css')});
+                    // Also change the color of the table rows
+                    $(".search-result:nth-child(even) ").css({'background': $(this).attr('data-css')});
                     // Make the old colour look not selected
                     $('.' + settings.highlightColour).removeClass('selected');
                     // And make the new one look selected
@@ -278,12 +312,12 @@ function genUUID()
                     '<input type="button" id="search-clear" value="Clear" disabled="disabled" />' +
                     '<br> Highlight colour:' +
                     '<ul id="search-colours">' +
-                        '<li class="colour-red" data-css="rgb(255, 0, 0, 0.2)"></li>' +
-                        '<li class="colour-orange" data-css="rgb(248, 128, 13, 0.2)"></li>' +
-                        '<li class="colour-yellow" data-css="rgb(255, 255, 0, 0.2)"></li>' +
-                        '<li class="colour-green" data-css="rgb(125, 255, 23, 0.2)"></li>' +
-                        '<li class="colour-blue" data-css="rgb(92, 179, 255, 0.2)"></li>' +
-                        '<li class="colour-purple" data-css="rgb(141, 56, 201, 0.2)"></li>' +
+                        '<li class="colour-red" data-css="rgba(255, 0, 0, 0.2)"></li>' +
+                        '<li class="colour-orange" data-css="rgba(248, 128, 13, 0.2)"></li>' +
+                        '<li class="colour-yellow" data-css="rgba(255, 255, 0, 0.2)"></li>' +
+                        '<li class="colour-green" data-css="rgba(125, 255, 23, 0.2)"></li>' +
+                        '<li class="colour-blue" data-css="rgba(92, 179, 255, 0.2)"></li>' +
+                        '<li class="colour-purple" data-css="rgba(141, 56, 201, 0.2)"></li>' +
                     '</ul>' +
                 '</form>' +
                 '<div id="search-controls">' +
@@ -292,11 +326,11 @@ function genUUID()
                     '<input type="button" id="search-next" value="next" disabled="disabled" />' +
                 '</div>' +
                 '</div>' +
-                '<table id="search-results" class="notcenter">' +
-                    '<tr id="search-results-header">' +
-                        '<td>Page</td><td>Pitches</td><td></td>' +
-                    '</tr>' +
-                '</table>');
+                '<div id="search-results" class="notcenter">' +
+                    '<div id="search-results-header">' +
+                        '<span>Page</span><span>Pitches</span><span></span>' +
+                    '</div>' +
+                '</div>');
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');
 

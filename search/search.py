@@ -9,7 +9,6 @@ from operator import itemgetter
 
 solrconn = solr.SolrConnection(conf.SOLR_URL)
 
-
 class LiberSearchException(Exception):
     def __init__(self, message):
         self.message = message

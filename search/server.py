@@ -11,7 +11,7 @@ from operator import itemgetter
 import divaserve
 import conf
 
-diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
+#diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 
 class SearchHandler(tornado.web.RequestHandler):
