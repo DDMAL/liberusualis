@@ -42,6 +42,14 @@ function genUUID()
             }
         };
 
+        var curResultNum = 1;
+        var addResult = function(resultID, pageNum, result){
+            $("#search-results").append("<tr class='search-result' data-result-id=" + resultID + ">" + 
+                '<td>' + pageNum + "</td><td>" + result.pnames + "</td>" +
+                '</tr><br>');
+            curResultNum += 1;
+        };
+
         var loadBoxes = function() {
             updateStatus("Loading results");
             //the 4 in the ajaxURL is the max zoom level * 2. Leaving this as a magic number until I can fix Solr
@@ -70,11 +78,6 @@ function genUUID()
                     for (idx in data)
                     {
                         var curBox = data[idx];
-                        for (x in curBox.results)
-                        {
-                            $("#search-results").append(x + ": " + curBox.results[x] + "<br>");
-                        }
-                        $("#search-results").append("<br>");
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
                         var boxID = curBox['id'] || genUUID();
                         var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
@@ -91,6 +94,8 @@ function genUUID()
                         {
                             regions[pIindex].push(dimensionsArr);
                         }
+
+                        addResult(boxID, curBox['p'], curBox.results);
                     }
 
                     settings.diva.resetHighlights();
@@ -133,6 +138,9 @@ function genUUID()
             settings.numBoxes = 0;
             $('#search-next').attr('disabled', 'disabled');
             $('#search-prev').attr('disabled', 'disabled');
+
+            $(".search-result").remove();
+            curResultNum = 1;
         };
 
         this.setDocumentViewer = function(diva) {
@@ -254,6 +262,7 @@ function genUUID()
             
             // Now create all the divs and such
             $(settings.elementSelector).append(
+                '<div id="search-header">' +
                 '<form id="search-input">' +
                     '<input type="text" id="search-query" size="25" />' +
                     '<select id="search-type" name="search-type">' +
@@ -276,14 +285,18 @@ function genUUID()
                         '<li class="colour-blue" data-css="rgb(92, 179, 255, 0.2)"></li>' +
                         '<li class="colour-purple" data-css="rgb(141, 56, 201, 0.2)"></li>' +
                     '</ul>' +
-                '</form>');
-            $(settings.elementSelector).append(
+                '</form>' +
                 '<div id="search-controls">' +
                     '<input type="button" id="search-prev" value="previous" disabled="disabled" />' +
                     '<div id="search-status"></div>' +
                     '<input type="button" id="search-next" value="next" disabled="disabled" />' +
                 '</div>' +
-                '<div id="search-results"></div>');
+                '</div>' +
+                '<table id="search-results" class="notcenter">' +
+                    '<tr id="search-results-header">' +
+                        '<td>Page</td><td>Pitches</td><td></td>' +
+                    '</tr>' +
+                '</table>');
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');
 
