@@ -31,7 +31,7 @@ h1 {
     position: relative;
     height:calc(85% - 50px);
     margin: 0 auto;
-    padding: 5px;
+    padding: 10px;
 }
 
 #diva-wrapper > .diva-tools {
@@ -39,7 +39,7 @@ h1 {
 }
 
 #search-wrapper {
-    padding:5px;
+    padding:10px;
 }
 #search-results {
     overflow-y: scroll;
@@ -77,6 +77,13 @@ div[id^=search-box] {
     border: 2px solid transparent;
 }
 
+#search-input input {
+    height:2em;
+}
+#search-input select {
+    height:2em;
+}
+
 #search-colours {
     list-style-type: none;
     display: inline;
@@ -95,6 +102,12 @@ div[id^=search-box] {
 
 #search-header {
     border-bottom: thin black solid;
+}
+
+#header-info {
+    padding-bottom:20px;
+    margin-bottom:20px;
+    border-bottom: 2px black solid;
 }
 
 #search-colours .selected {
@@ -146,9 +159,11 @@ div[id^=search-box] {
 }
 
 #search-prev {
+    height:2em;
     float: left;
 }
 #search-next {
+    height:2em;
     float: right;
 }
 

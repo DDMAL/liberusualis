@@ -28,9 +28,9 @@
         </div>
         <div id="navbar" class="collapse navbar-collapse navbar-right">
           <ul class="nav navbar-nav">
-            <li><a onclick="$('#helpModal').modal('show')">Help</a></li>
-            <li><a onclick="$('#aboutModal').modal('show')">About</a></li>
-            <li><a onclick="$('#contactModal').modal('show')">Contact</a></li>
+            <li><a class="helpSpawn">Help</a></li>
+            <li><a class="aboutSpawn">About</a></li>
+            <li><a class="contactSpawn">Contact</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -116,20 +116,7 @@
 
     var dv;
     $(document).ready(function() {
-        function resizeComponents()
-        {
-            if(dv.getState().f) return; //don't do this in fullscreen
-            $("#html_body").offset({'top': $("#navbar_header").height()});
-            $("#html_body").height($(window).height() - $("#html_body").offset().top);
-            $("#diva-wrapper").offset({'top': $("#navbar_header").height()});
-            $("#diva-wrapper").height($("#html_body").height() - 10); //10 for padding
-            $("#search-wrapper").height($("#diva-wrapper").height());
-            $("#search-wrapper").offset({'top': $("#navbar_header").height()});
-            $("#search-results").height($("#html_body").height() - $("#search-header").height() - 20);
-            $(".diva-outer").height($("#diva-wrapper").height() - 44); //for toolbar
-        }
         $('#diva-wrapper').diva({
-            zoomLevel: 0,
             tileFadeSpeed: 100,
             enableAutoTitle: false,
             enableHighlight: true,
@@ -147,9 +134,10 @@
             var search = $('#search-wrapper').data('search');
             dv = $('#diva-wrapper').data('diva');
             search.setDocumentViewer(dv);
-            resizeComponents();
         });
-        $(window).on('resize', resizeComponents);
+        $(".helpSpawn").on('click', function(){$('#helpModal').modal('show');});
+        $(".aboutSpawn").on('click', function(){$('#aboutModal').modal('show');});
+        $(".contactSpawn").on('click', function(){$('#contactModal').modal('show');});
     });
 
     </script>

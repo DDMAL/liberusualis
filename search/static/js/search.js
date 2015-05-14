@@ -72,6 +72,8 @@ function genUUID()
         {
             var dataID = e.target.closest(".search-result").getAttribute('data-result-id');
             $(".search-result-expanded[data-result-id=" + dataID + "]").slideToggle();
+            if (e.target.innerText == "More info") e.target.innerText = "Less info";
+            else e.target.innerText = "More info";
         }
 
         diva.Events.subscribe("SelectedHighlightChanged", function(highlightID, highlightPage)
@@ -103,10 +105,11 @@ function genUUID()
                         updateStatus("No results for " + settings.query);
                         return;
                     }
-
+                    
+                    initializeResultsHeader();
                     var pageIndexes = [];
                     var regions = [];
-                    for (idx in data)
+                    for (var idx = 0; idx < data.length; idx++)
                     {
                         var curBox = data[idx];
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
@@ -117,7 +120,7 @@ function genUUID()
                         if(settings.orderedBoxes.indexOf(boxID) == -1)
                         {
                             settings.orderedBoxes.push(boxID);
-                            addResult(boxID, curBox['p'], curBox.results);
+                            if (idx < 100) addResult(boxID, curBox['p'], curBox.results);
                         } 
 
                         if (pIindex == -1) 
@@ -172,7 +175,7 @@ function genUUID()
             $('#search-next').attr('disabled', 'disabled');
             $('#search-prev').attr('disabled', 'disabled');
 
-            $(".search-result").remove();
+            $("#search-results").html("");
         };
 
         this.setDocumentViewer = function(diva) {
@@ -192,6 +195,7 @@ function genUUID()
                $('#search-type').val($('option[name="' + type + '"]').text());
                loadBoxes();
             }
+            resizeComponents();
         };
 
         diva.Events.subscribe("ModeDidSwitch", function(inFullscreen)
@@ -291,46 +295,83 @@ function genUUID()
             $('#curBox').text(boxNumber);
         };
 
+        function initializeResultsHeader()
+        {
+            $("#search-results").append(
+                '<div id="search-results-header">' +
+                    '<span>Page</span><span>Pitches</span><span></span>' +
+                '</div>');
+        }
+
+        function resizeComponents()
+        {
+            if(dv.getState().f) return; //don't do this in fullscreen
+            $("#html_body").offset({'top': $("#navbar_header").height()});
+            $("#html_body").height($(window).height() - $("#html_body").offset().top);
+            $("#diva-wrapper").offset({'top': $("#navbar_header").height()});
+            $("#diva-wrapper").height($("#html_body").height() - 20); //20 for padding
+            $("#search-wrapper").height($("#diva-wrapper").height());
+            $("#search-wrapper").offset({'top': $("#navbar_header").height()});
+            //$("#search-results").height($("#html_body").height() - $("#search-header").height() - 50);
+            $(".diva-outer").height($("#diva-wrapper").outerHeight() - $(".diva-outer").position().top - parseInt($("#diva-wrapper").css('padding-bottom'))); //for toolbar
+            $("#search-results").height(document.getElementById("1-diva-outer").getBoundingClientRect().bottom - $("#search-results").offset().top - parseInt($("#search-wrapper").css('padding-bottom')));
+            diva.Events.publish("PanelSizeDidChange");
+        }
+
         var init = function() {
             settings.elementSelector = '#' + $(element).attr('id');
             
             // Now create all the divs and such
             $(settings.elementSelector).append(
                 '<div id="search-header">' +
-                '<form id="search-input">' +
-                    '<input type="text" id="search-query" size="25" />' +
-                    '<select id="search-type" name="search-type">' +
-                        '<option name="neumes">Neumes</option>' +
-                        '<option name="pnames" selected="selected">Strict pitch sequence</option>' +
-                        '<option name="pnames-invariant">Transposed pitch sequence</option>' +
-                        '<option name="contour">Contour</option>' +
-                        '<option name="intervals">Intervals</option>' +
-                        '<option name="text">Text</option>' +
-                        '<option name="incipit">Incipit</option>' +
-                    '</select>' +
-                    '<input type="submit" id="search-go" value="Search" />' +
-                    '<input type="button" id="search-clear" value="Clear" disabled="disabled" />' +
-                    '<br> Highlight colour:' +
-                    '<ul id="search-colours">' +
-                        '<li class="colour-red" data-css="rgba(255, 0, 0, 0.2)"></li>' +
-                        '<li class="colour-orange" data-css="rgba(248, 128, 13, 0.2)"></li>' +
-                        '<li class="colour-yellow" data-css="rgba(255, 255, 0, 0.2)"></li>' +
-                        '<li class="colour-green" data-css="rgba(125, 255, 23, 0.2)"></li>' +
-                        '<li class="colour-blue" data-css="rgba(92, 179, 255, 0.2)"></li>' +
-                        '<li class="colour-purple" data-css="rgba(141, 56, 201, 0.2)"></li>' +
-                    '</ul>' +
-                '</form>' +
-                '<div id="search-controls">' +
-                    '<input type="button" id="search-prev" value="previous" disabled="disabled" />' +
-                    '<div id="search-status"></div>' +
-                    '<input type="button" id="search-next" value="next" disabled="disabled" />' +
-                '</div>' +
-                '</div>' +
-                '<div id="search-results" class="notcenter">' +
-                    '<div id="search-results-header">' +
-                        '<span>Page</span><span>Pitches</span><span></span>' +
+                    '<div id="header-info">' +
+                        '<h2>Search the Liber Usualis</h2>' +
+                        '<a class="helpSpawn">Need help searching?</a><br>' +
+                        '<a class="aboutSpawn">About this project...</a><br>' +
+                        '<a class="contactSpawn">Contact us...</a><br><br>' +
+                        '<a class="minimizer">Minimize this header...</a>' +
                     '</div>' +
+
+                    '<form id="search-input">' +
+                        '<input type="text" id="search-query" size="25" />' +
+                        '<select id="search-type" name="search-type">' +
+                            '<option name="neumes">Neumes</option>' +
+                            '<option name="pnames" selected="selected">Strict pitch sequence</option>' +
+                            '<option name="pnames-invariant">Transposed pitch sequence</option>' +
+                            '<option name="contour">Contour</option>' +
+                            '<option name="intervals">Intervals</option>' +
+                            '<option name="text">Text</option>' +
+                            '<option name="incipit">Incipit</option>' +
+                        '</select>' +
+                        '<input type="submit" id="search-go" value="Search" />' +
+                        '<input type="button" id="search-clear" value="Clear" disabled="disabled" />' +
+                        '<br> Highlight colour:' +
+                        '<ul id="search-colours">' +
+                            '<li class="colour-red" data-css="rgba(255, 0, 0, 0.2)"></li>' +
+                            '<li class="colour-orange" data-css="rgba(248, 128, 13, 0.2)"></li>' +
+                            '<li class="colour-yellow" data-css="rgba(255, 255, 0, 0.2)"></li>' +
+                            '<li class="colour-green" data-css="rgba(125, 255, 23, 0.2)"></li>' +
+                            '<li class="colour-blue" data-css="rgba(92, 179, 255, 0.2)"></li>' +
+                            '<li class="colour-purple" data-css="rgba(141, 56, 201, 0.2)"></li>' +
+                        '</ul>' +
+                    '</form>' +
+
+                    '<div id="search-controls">' +
+                        '<input type="button" id="search-prev" value="previous" disabled="disabled" />' +
+                        '<div id="search-status"></div>' +
+                        '<input type="button" id="search-next" value="next" disabled="disabled" />' +
+                    '</div>' +
+                '</div>' +
+
+                '<div id="search-results" class="notcenter">' +
                 '</div>');
+
+            $(window).on('resize', resizeComponents);
+            $(".minimizer").on('click', function(e)
+            {
+                $("#header-info").slideToggle(400, resizeComponents);
+            });
+
             // Make the default colour selected
             $('.' + settings.highlightColour).addClass('selected');
 
