@@ -1,4 +1,4 @@
-Pillow==5.2.0
+Pillow==9.3.0
 argparse==1.2.1
 backports.ssl-match-hostname==3.4.0.2
 certifi==2022.12.7
