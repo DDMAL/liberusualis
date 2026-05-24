@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: solr
+  namespace: liber
+spec:
+  serviceName: solr
+  replicas: 1
+  selector:
+    matchLabels:
+      app: solr
+  template:
+    metadata:
+      labels:
+        app: solr
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: solr
+          image: ghcr.io/ddmal/liber-solr:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: CATALINA_OPTS
+              value: "-Xmx1g -Xms512m"
+          volumeMounts:
+            - name: solr-data
+              mountPath: /var/db/solr/liber
+          readinessProbe:
+            httpGet:
+              path: /liber-search/admin/ping
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 768Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: solr-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 3Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: solr
+  namespace: liber
+spec:
+  clusterIP: None
+  selector:
+    app: solr
+  ports:
+    - port: 8080
+      targetPort: 8080

@@ -16,7 +16,7 @@ except ImportError:
     except ImportError:
         import Image
     def image_size(fn):
-        print fn
+        print(fn)
         img = Image.open(fn)
         size = img.size
         del img
@@ -41,7 +41,7 @@ class DivaServe(object):
 
         lmz = 0
         # Read image sizes on startup
-        print >> sys.stderr, "loading images..."
+        print("loading images...", file=sys.stderr)
 
         if os.path.exists('divaserve.json'):
             f = open('divaserve.json', 'r')
@@ -67,7 +67,7 @@ class DivaServe(object):
 
             json.dump((self.lowest_max_zoom, self.images), open('divaserve.json', "w"))
 
-        print >> sys.stderr, "images loaded"
+        print("images loaded", file=sys.stderr)
 
 
     def get(self, zoom):
@@ -82,7 +82,7 @@ class DivaServe(object):
         mx_h = mx_w = t_wid = t_hei = num_pages = max_ratio = 0
         pgs = []
 
-        for v in self.images.itervalues():
+        for v in self.images.values():
             h = self._incorporate_zoom(v['mx_h'], self.lowest_max_zoom - zoom)
             w = self._incorporate_zoom(v['mx_w'], self.lowest_max_zoom - zoom)
 

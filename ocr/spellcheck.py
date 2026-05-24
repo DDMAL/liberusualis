@@ -12,7 +12,7 @@ def train(features):
         model[f] += 1
     return model
 
-NWORDS = train(words(file('latin-english.txt').read()))
+NWORDS = train(words(open('latin-english.txt').read()))
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 

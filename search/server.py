@@ -21,7 +21,7 @@ class SearchHandler(tornado.web.RequestHandler):
         try:
             boxes = search.do_query(search_type, query)
             self.write(json.dumps(boxes))
-        except search.LiberSearchException, e:
+        except search.LiberSearchException as e:
             raise tornado.web.HTTPError(400)
 
 

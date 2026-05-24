@@ -23,7 +23,7 @@
 # Last modified June 2011
 #
 # ================================================================
-import solr
+import pysolr
 import uuid
 from math import *
 from music21.interval import convertSemitoneToSpecifierGeneric
@@ -233,14 +233,14 @@ def storeText(lines, zones, textdb):
 
 def processMeiFile(ffile, shortest_gram, longest_gram, page_number):
     solr_server = "http://localhost:8080"
-    solrconn = solr.SolrConnection(solr_server)
-    print '\nProcessing ' + str(ffile) + '...'
+    solrconn = pysolr.Solr(solr_server)
+    print('\nProcessing ' + str(ffile) + '...')
     try:
         meifile = XmlImport.documentFromFile(str(ffile))
-    except Exception, e:
-        print "E: ", e
+    except Exception as e:
+        print("E: ", e)
         lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
-        print "Whoops!"
+        print("Whoops!")
 
     page = meifile.getElementsByName('page')
     pagen = page_number
@@ -280,7 +280,7 @@ def processMeiFile(ffile, shortest_gram, longest_gram, page_number):
             #             print 'pitch: '+ str(note.pitch[0])+ ' neume: ' + neume + " system: " +str(s)
             # ***********************************************
 
-            print "Processing pitch sequences... "
+            print("Processing pitch sequences... ")
             # for j,note in enumerate(notes):
             for j in range(0, nnotes-i):
                 seq = notes[j:j+i]
@@ -315,9 +315,9 @@ def processMeiFile(ffile, shortest_gram, longest_gram, page_number):
                 mydocs.append({'id': str(uuid.uuid4()), 'pagen': int(pagen), 'pnames': pnames, 'neumes': neumes, 'contour': contour, 'semitones': str_semitones, 'intervals': intervals, 'location': str(location)})
 
         else:
-            print 'page ' + str(pagen) + ' already processed\n'
+            print('page ' + str(pagen) + ' already processed\n')
 
-    solrconn.add_many(mydocs)
+    solrconn.add(mydocs)
     solrconn.commit()
     systemcache.clear()
     idcache.clear()

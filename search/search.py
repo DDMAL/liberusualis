@@ -1,13 +1,12 @@
-import solr
+import pysolr
 import os
 import search_utils
 import conf
 import json
 import re
-import types
 from operator import itemgetter
 
-solrconn = solr.SolrConnection(conf.SOLR_URL)
+solrconn = pysolr.Solr(conf.SOLR_URL)
 
 class LiberSearchException(Exception):
     def __init__(self, message):
@@ -40,10 +39,10 @@ def do_query(qtype, query, max_zoom=4):
         raise LiberSearchException("Invalid query type provided")
 
     if qtype == "pnames-invariant":
-        response = solrconn.query(query_stmt, score=False, sort="pagen asc", q_op="OR", rows=1000000)
+        response = solrconn.search(query_stmt, sort="pagen asc", rows=1000000, **{'q.op': 'OR'})
     else:
-        response = solrconn.query(query_stmt, score=False, sort="pagen asc", rows=1000000)
-    numfound = response.numFound
+        response = solrconn.search(query_stmt, sort="pagen asc", rows=1000000)
+    numfound = response.hits
 
     results = []
     boxes = []
@@ -65,7 +64,7 @@ def do_query(qtype, query, max_zoom=4):
             'intervals': d['intervals']
         }
 
-        if isinstance(locations, types.DictType):
+        if isinstance(locations, dict):
             box_w = locations['width']
             box_h = locations['height']
             box_x = locations['ulx']

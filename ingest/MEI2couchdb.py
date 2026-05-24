@@ -44,7 +44,7 @@ def findbyID(llist, id):
     """ Returns the object in llist that has the given id. Used for finding zone.
         pymei function get_by_facs can be used instead, but this one is faster.
     """
-    return llist[(i for i, obj in enumerate(llist) if obj.id == id).next()]
+    return llist[next(i for i, obj in enumerate(llist) if obj.id == id)]
 
 def getLocation(seq, meifile, zones):
     """ Given a sequence of notes and the corresponding MEI Document, calculates and returns the json formatted list of 
@@ -186,10 +186,10 @@ textdb = couch['text'] # database for text
 # Iterate through each MEI file in directory
 from pymei.Import import convert
 for ffile in meifiles:
-    print '\nProcessing ' + str(ffile) + '...'
+    print('\nProcessing ' + str(ffile) + '...')
     try:
         meifile = convert(str(ffile))
-    except Exception, e:
+    except Exception as e:
         lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
     page = meifile.search('page')
     pagen = int(page[0].attribute_by_name('n').value)
@@ -226,7 +226,7 @@ for ffile in meifiles:
           #             print 'pitch: '+ str(note.pitch[0])+ ' neume: ' + neume + " system: " +str(s)
           #***********************************************
 
-          print "Processing pitch sequences... "
+          print("Processing pitch sequences... ")
 
           # for j,note in enumerate(notes):
           for j in range(0,nnotes-i):
@@ -259,7 +259,7 @@ for ffile in meifiles:
 
               # save new document
               db.save({'pagen': int(pagen), 'pnames': pnames, 'neumes': neumes, 'contour': contour, 'semitones': str_semitones, 'intervals': intervals, 'location': location})
-          print db.info()
+          print(db.info())
         else:
-          print 'page ' + str(pagen) +  ' already processed\n'
+          print('page ' + str(pagen) + ' already processed\n')
 

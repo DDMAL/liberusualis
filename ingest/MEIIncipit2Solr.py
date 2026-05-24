@@ -1,13 +1,13 @@
 import pymei
 import sys
 import os
-import solr
+import pysolr
 import uuid
 
 from pymei.Import import convert
 from pymei.Helpers import flatten
 
-solrconn = solr.SolrConnection("http://132.206.14.42:8080/liber-search")
+solrconn = pysolr.Solr("http://132.206.14.42:8080/liber-search")
 idcache = {}
 systemcache = {}
 
@@ -19,7 +19,7 @@ def findbyID(llist, mid):
     if mid in idcache:
         return idcache[mid]
     else:
-        idcache[mid] = llist[(i for i, obj in enumerate(llist) if obj.id == mid).next()]
+        idcache[mid] = llist[next(i for i, obj in enumerate(llist) if obj.id == mid)]
         return idcache[mid]
 
 def getLocation(seq, meifile, zones):
@@ -79,10 +79,10 @@ def getIncipit(ffile):
     """ For each line of text in the list "lines", this function gets the corresponding box coordinates and saves the 
     line as a doc in the "text" database.
     """
-    print '\nProcessing ' + str(ffile) + '...'
+    print('\nProcessing ' + str(ffile) + '...')
     try:
         meifile = convert(str(ffile))
-    except Exception, e:
+    except Exception as e:
         lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
 
     page = meifile.search('page')
@@ -128,8 +128,8 @@ def getIncipit(ffile):
 
         incipits.append({"id": str(uuid.uuid4()), "incipit": notes, "location": str(locs), "pagen": pagen})
     
-    print incipits
-    solrconn.add_many(incipits)
+    print(incipits)
+    solrconn.add(incipits)
 
 
 if __name__ == '__main__':
@@ -147,7 +147,7 @@ if __name__ == '__main__':
                 continue
             if "_corr.mei" in f:
                 meifiles.append(os.path.join(bd,f))
-                print "Adding {0}".format(f)
+                print("Adding {0}".format(f))
             # if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
                 
             #     meifiles = meifiles + [os.path.join(bd,f)] 

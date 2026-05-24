@@ -1,0 +1,12 @@
+.git
+.gitmodules
+.idea
+diva.js/.git
+ingest/
+ocr/
+dataserver/
+solr/
+*.md
+search/conf.py
+search/conf.py.dist
+dataserver/conf.py.dist

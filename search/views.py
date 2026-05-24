@@ -1,7 +1,7 @@
 from django.http import HttpResponse, Http404
 import json
 from search.utils import get_transpositions, get_neumes_length, valid_pitch_sequence, valid_contour_sequence, incorporate_zoom
-import urllib
+import urllib.request
 from operator import itemgetter
 
 def query(request, query_type, query, zoom):
@@ -55,7 +55,7 @@ def query(request, query_type, query, zoom):
         raise Http404
 
     url = base_url + database + '_search?size=1000000&fields=pagen,_source.location&q=' + query_url
-    result = json.load(urllib.urlopen(url))
+    result = json.load(urllib.request.urlopen(url))
     hits = result['hits']
     hits = hits['hits']
 

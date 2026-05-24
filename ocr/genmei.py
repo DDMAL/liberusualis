@@ -1,4 +1,3 @@
-from string import lower, replace
 from PIL import Image
 from optparse import OptionParser
 import glob
@@ -97,15 +96,15 @@ def correct_text(line):
 	# check if text output should be corrected or not
 	if options.corrected:
 		# fix strange problem where 'lu-' is read as 'hb'
-		line['text']=replace(line['text'], 'hb', 'lu-')
+		line['text'] = line['text'].replace('hb', 'lu-')
 		# remove dashes from text
-		line['text']=replace(line['text'], '- ', '')
-		line['text']=replace(line['text'], '-', '')
+		line['text'] = line['text'].replace('- ', '')
+		line['text'] = line['text'].replace('-', '')
 		# correct common spelling errors that the spell-checker cannot catch
 		words=line['text'].split()
 		words[0]=force_correct(words[0])
 		# correct spelling if corrected output is not 's' (short words sometimes get corrected to 's' - weird)
-		words=[correct(lower(word)) for word in words if correct(lower(word))!='s']
+		words=[correct(word.lower()) for word in words if correct(word.lower())!='s']
 		return ' '.join(words)
 	else:
 		return line['text']
