@@ -17,7 +17,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: search
-          image: ghcr.io/ddmal/liber-search:latest
+          image: ghcr.io/ddmal/liber-search:main-latest
           ports:
             - containerPort: 8091
           env:
