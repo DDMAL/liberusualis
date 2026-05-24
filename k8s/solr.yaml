@@ -18,7 +18,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: solr
-          image: ghcr.io/ddmal/liber-solr:main-latest
+          image: ghcr.io/ddmal/liber-solr:k8s-migration-latest
           ports:
             - containerPort: 8080
           env:

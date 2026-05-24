@@ -17,7 +17,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: search
-          image: ghcr.io/ddmal/liber-search:main-latest
+          image: ghcr.io/ddmal/liber-search:k8s-migration-latest
           ports:
             - containerPort: 8091
           env:
@@ -27,6 +27,8 @@ spec:
               value: "http://images.simssa.ca/iip/iipsrv.fcgi?FIF=/liber/"
             - name: APP_ROOT
               value: "/"
+            - name: PORT
+              value: "8091"
           readinessProbe:
             httpGet:
               path: /

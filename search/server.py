@@ -63,8 +63,9 @@ def main(port):
 
 if __name__ == "__main__":
     import sys
+    import os
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     else:
-        port = 8080
+        port = int(os.environ.get("PORT", 8091))
     main(port)
