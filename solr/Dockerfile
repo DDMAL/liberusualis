@@ -2,7 +2,7 @@ FROM maven:3.6-openjdk-8-slim AS builder
 WORKDIR /build
 COPY solr/pom.xml .
 COPY solr/src ./src
-RUN mvn package -DskipTests -q
+RUN mvn package -DskipTests
 
 FROM tomcat:8.5-jdk8-openjdk-slim
 
