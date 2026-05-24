@@ -19,6 +19,7 @@ spec:
       containers:
         - name: solr
           image: ghcr.io/ddmal/liber-solr:k8s-migration-latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:

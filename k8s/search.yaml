@@ -18,6 +18,7 @@ spec:
       containers:
         - name: search
           image: ghcr.io/ddmal/liber-search:k8s-migration-latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8091
           env:
