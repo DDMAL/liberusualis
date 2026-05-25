@@ -13,7 +13,7 @@ def get_transpositions(sequence):
        e.g. getTranspositions('cece') returns ['cece', 'dfdf', 'egeg', 'fafa', 'gbgb', 'acac', 'bdbd']
    """
    sequence = str(sequence)
-   asciinum = map(ord,sequence)
+   asciinum = list(map(ord, sequence))
    def transposeUp(x):
        if x < 103:
            return x+1
@@ -21,7 +21,7 @@ def get_transpositions(sequence):
            return x-6
    transpositions = [sequence]
    for i in range(1,7):
-       asciinum = map(transposeUp, asciinum)
+       asciinum = list(map(transposeUp, asciinum))
        transposed = ''.join(chr(i) for i in asciinum)#convert to string
        transpositions = transpositions + [transposed]
    return transpositions

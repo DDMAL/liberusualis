@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: liber-search
+  namespace: liber
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liber-search
+  template:
+    metadata:
+      labels:
+        app: liber-search
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: search
+          image: ghcr.io/ddmal/liber-search:k8s-migration-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8091
+          env:
+            - name: SOLR_URL
+              value: "http://solr:8983/solr/liber-search"
+            - name: IIP_SERVER
+              value: "https://images.simssa.ca/iip/iipsrv.fcgi?FIF=/liber/"
+            - name: APP_ROOT
+              value: "/"
+            - name: PORT
+              value: "8091"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8091
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 8091
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: liber-search
+  namespace: liber
+spec:
+  selector:
+    app: liber-search
+  ports:
+    - port: 80
+      targetPort: 8091

@@ -1,86 +1,101 @@
-import pymei
-import sys
-import os
-import solr
+# Usage: python MEIText2Solr.py <mei_directory> <solr_url>
+# Example: python MEIText2Solr.py /path/to/mei http://localhost:8983/solr/liber-search
+# Note: text content in mei:l elements is empty in the MEI5 files; this will index nothing
+# until the OCR text layer is restored.
+import xml.etree.ElementTree as ET
+import pysolr
 import uuid
+import os
+import sys
+import logging
 
-from pymei.Import import convert
+logging.basicConfig(filename='errors.log', format='%(asctime)-6s: %(name)s - %(levelname)s - %(message)s')
+lg = logging.getLogger('meisearch')
+lg.setLevel(logging.DEBUG)
 
-solrconn = solr.SolrConnection("http://132.206.14.42:8080/liber-search")
-idcache = {}
-
-
-def findbyID(llist, mid):
-    """ Returns the object in llist that has the given id. Used for finding zone.
-        pymei function get_by_facs can be used instead, but this one is faster.
-    """
-    if mid in idcache:
-        return idcache[mid]
-    else:
-        idcache[mid] = llist[(i for i, obj in enumerate(llist) if obj.id == mid).next()]
-        return idcache[mid]
+NS_MEI = 'http://www.music-encoding.org/ns/mei'
+NS_XML = 'http://www.w3.org/XML/1998/namespace'
+M = '{%s}' % NS_MEI
+X = '{%s}' % NS_XML
 
 
-def storeText(ffile):
-    """ For each line of text in the list "lines", this function gets the corresponding box coordinates and saves the 
-    line as a doc in the "text" database.
-    """
-    print '\nProcessing ' + str(ffile) + '...'
+def process_mei_file(filepath, solrconn):
+    print(f'\nProcessing {filepath}...')
     try:
-        meifile = convert(str(ffile))
-    except Exception, e:
-        lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
+        tree = ET.parse(filepath)
+    except Exception as e:
+        lg.error(f"Could not parse {filepath}: {e}")
+        return
 
-    page = meifile.search('page')
-    pagen = int(page[0].attribute_by_name('n').value)
+    root = tree.getroot()
 
-    lines = meifile.search('l')
-    zones = meifile.search('zone')
+    pb = root.find(f'.//{M}pb')
+    if pb is None:
+        lg.warning(f"No pb element in {filepath}")
+        return
+    pagen = int(pb.get('n', 0))
 
-    textdocs = []
-    for line in lines:
-        text = line.value
-        facs = str(line.attribute_by_name('facs').value)
-        zone = findbyID(zones, facs)
-        ulx = int(zone.ulx)
-        uly = int(zone.uly)
-        lrx = int(zone.lrx)
-        lry = int(zone.lry)
-    
-        textdocs.append({'id': str(uuid.uuid4()), 'pagen': pagen, 'text': text, 'location': {"ulx": ulx ,"uly": uly, "height": abs(uly - lry), "width": abs(ulx - lrx)}})
-    
-    solrconn.add_many(textdocs)
-    solrconn.commit()
+    zones = {}
+    for zone in root.findall(f'.//{M}zone'):
+        zid = zone.get(f'{X}id')
+        if zid:
+            zones[zid] = {
+                'ulx': int(zone.get('ulx', 0)),
+                'uly': int(zone.get('uly', 0)),
+                'lrx': int(zone.get('lrx', 0)),
+                'lry': int(zone.get('lry', 0)),
+            }
+
+    docs = []
+    for line in root.findall(f'.//{M}l'):
+        text = (line.text or '').strip()
+        if not text:
+            continue
+
+        facs = line.get('facs', '')
+        zone = zones.get(facs)
+        if not zone:
+            continue
+
+        docs.append({
+            'id': str(uuid.uuid4()),
+            'pagen': pagen,
+            'text': text,
+            'location': str([{
+                'ulx': zone['ulx'],
+                'uly': zone['uly'],
+                'height': abs(zone['uly'] - zone['lry']),
+                'width': abs(zone['ulx'] - zone['lrx']),
+            }]),
+        })
+
+    if docs:
+        solrconn.add(docs)
+        solrconn.commit()
+    print(f'  Page {pagen}: {len(docs)} text lines indexed')
+
 
 if __name__ == '__main__':
-    #***************************** MEI PROCESSING *******************************      
-    args = sys.argv
-    path = args[1]
+    if len(sys.argv) < 3:
+        print("Usage: python MEIText2Solr.py <directory> <solr_url>")
+        sys.exit(1)
 
-    # Generate list of files to process, preferring human-corrected MEI files
+    path = sys.argv[1]
+    solr_url = sys.argv[2]
+    solrconn = pysolr.Solr(solr_url, timeout=120)
+
     meifiles = []
     for bd, dn, fn in os.walk(path):
-        if ".git" in bd:
-            continue
         for f in fn:
-            if f.startswith("."):
-                continue
-            if "_corr.mei" in f:
-                meifiles.append(os.path.join(bd,f))
-                print "Adding {0}".format(f)
-            # if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
-                
-            #     meifiles = meifiles + [os.path.join(bd,f)] 
+            if f.endswith('.mei'):
+                meifiles.append(os.path.join(bd, f))
 
     meifiles.sort()
-    # couch = couchdb.Server("http://localhost:5984")
-    # textdb = couch['text'] # database for text
+    print(f"Found {len(meifiles)} MEI files")
 
-    # Iterate through each MEI file in directory
     for ffile in meifiles:
-        storeText(ffile)
-        idcache.clear()
-
-
-
-
+        try:
+            process_mei_file(ffile, solrconn)
+        except Exception as e:
+            lg.error(f"Failed on {ffile}: {e}")
+            print(f"  ERROR: {e}")

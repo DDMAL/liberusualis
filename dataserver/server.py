@@ -26,15 +26,15 @@ class PageHandler(tornado.web.RequestHandler):
 
         headers = self.request.headers.get("Accept", "").split(",")
 
-        print headers
+        print(headers)
 
         if "application/json" in headers:
-            print "json"
+            print("json")
             self.set_header("Content-Type", "application/json")
             mei = xmltomei.xmltomei(page_mei_file)
             response = meitojson.meitojson(mei)
         else:
-            print "xml"
+            print("xml")
             self.set_header("Content-Type", "application/xml")
             f = open(page_mei_file, 'r')
             response = f.read()

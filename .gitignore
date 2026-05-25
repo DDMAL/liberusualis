@@ -1,3 +1,4 @@
 *.pyc
 conf.py
 solr/target/*
+.idea
