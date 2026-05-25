@@ -16,28 +16,27 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
+      securityContext:
+        fsGroup: 8983
       containers:
         - name: solr
           image: ghcr.io/ddmal/liber-solr:k8s-migration-latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
-          env:
-            - name: CATALINA_OPTS
-              value: "-Xmx1g -Xms512m"
+            - containerPort: 8983
           volumeMounts:
             - name: solr-data
               mountPath: /var/db/solr/liber
           readinessProbe:
             httpGet:
-              path: /liber-search/admin/ping
-              port: 8080
+              path: /solr/liber-search/admin/ping
+              port: 8983
             initialDelaySeconds: 30
             periodSeconds: 15
             failureThreshold: 5
           livenessProbe:
             tcpSocket:
-              port: 8080
+              port: 8983
             initialDelaySeconds: 60
             periodSeconds: 30
           resources:
@@ -67,5 +66,5 @@ spec:
   selector:
     app: solr
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: 8983
+      targetPort: 8983

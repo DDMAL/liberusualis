@@ -23,7 +23,7 @@ spec:
             - containerPort: 8091
           env:
             - name: SOLR_URL
-              value: "http://solr:8080/liber-search"
+              value: "http://solr:8983/solr/liber-search"
             - name: IIP_SERVER
               value: "http://images.simssa.ca/iip/iipsrv.fcgi?FIF=/liber/"
             - name: APP_ROOT
