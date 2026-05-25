@@ -20,7 +20,7 @@ spec:
         fsGroup: 8983
       containers:
         - name: solr
-          image: ghcr.io/ddmal/liber-solr:k8s-migration-latest
+          image: ghcr.io/ddmal/liber-solr:main-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8983

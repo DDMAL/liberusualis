@@ -17,7 +17,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: search
-          image: ghcr.io/ddmal/liber-search:k8s-migration-latest
+          image: ghcr.io/ddmal/liber-search:main-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8091
