@@ -1,12 +1,14 @@
-import pysolr
-import os
-import search_utils
 import conf
 import json
+import os
+import pysolr
 import re
 from operator import itemgetter
 
+import search_utils
+
 solrconn = pysolr.Solr(conf.SOLR_URL)
+
 
 class LiberSearchException(Exception):
     def __init__(self, message):
@@ -16,7 +18,7 @@ class LiberSearchException(Exception):
         return repr(self.message)
 
 
-def do_query(qtype, query, max_zoom=4):
+def do_query(qtype, query):
     query = query.lower()
 
     if qtype == "neumes":
@@ -42,9 +44,7 @@ def do_query(qtype, query, max_zoom=4):
         response = solrconn.search(query_stmt, sort="pagen asc", rows=1000000, **{'q.op': 'OR'})
     else:
         response = solrconn.search(query_stmt, sort="pagen asc", rows=1000000)
-    numfound = response.hits
 
-    results = []
     boxes = []
 
     # get only the longest ngram in the results
@@ -64,19 +64,10 @@ def do_query(qtype, query, max_zoom=4):
             'intervals': d['intervals']
         }
 
-        if isinstance(locations, dict):
-            box_w = locations['width']
-            box_h = locations['height']
-            box_x = locations['ulx']
-            box_y = locations['uly']
-            boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id, 'results': search_data})
-        else:
-            for location in locations:
-                box_w = location['width']
-                box_h = location['height']
-                box_x = location['ulx']
-                box_y = location['uly']
-                boxes.append({'p': page_number, 'w': box_w, 'h': box_h, 'x': box_x, 'y': box_y, 'id': box_id, 'results': search_data})
+        locs = [locations] if isinstance(locations, dict) else locations
+        for loc in locs:
+            boxes.append({'p': page_number, 'w': loc['width'], 'h': loc['height'],
+                          'x': loc['ulx'], 'y': loc['uly'], 'id': box_id, 'results': search_data})
 
     boxes_sorted = sorted(boxes, key=itemgetter('p', 'y'))
 

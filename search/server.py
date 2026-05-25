@@ -1,17 +1,16 @@
+import conf
+import json
+import os
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
-
-import search
-import json
-import os
 from operator import itemgetter
 from urllib.parse import urlparse, parse_qs
 
-import divaserve
-import conf
+import search
 
-#diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
+
+# diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 
 class SearchHandler(tornado.web.RequestHandler):
@@ -42,6 +41,7 @@ class DivaHandler(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/json")
         self.write(json.dumps(info))
 
+
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
     "debug": True,
@@ -52,6 +52,7 @@ settings = {
 def abs_path(relpath):
     root = conf.APP_ROOT.rstrip("/")
     return r"{0}{1}".format(root, relpath)
+
 
 application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
@@ -65,9 +66,11 @@ def main(port):
     server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
 
+
 if __name__ == "__main__":
     import sys
     import os
+
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     else:
