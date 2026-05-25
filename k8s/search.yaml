@@ -25,7 +25,7 @@ spec:
             - name: SOLR_URL
               value: "http://solr:8983/solr/liber-search"
             - name: IIP_SERVER
-              value: "http://images.simssa.ca/iip/iipsrv.fcgi?FIF=/liber/"
+              value: "https://images.simssa.ca/iip/iipsrv.fcgi?FIF=/liber/"
             - name: APP_ROOT
               value: "/"
             - name: PORT

@@ -5,8 +5,8 @@ import tornado.web
 import search
 import json
 import os
-# import solr
 from operator import itemgetter
+from urllib.parse import urlparse, parse_qs
 
 import divaserve
 import conf
@@ -28,7 +28,11 @@ class SearchHandler(tornado.web.RequestHandler):
 class RootHandler(tornado.web.RequestHandler):
     def get(self):
         app_root = conf.APP_ROOT.rstrip("/")
-        self.render("templates/index.html", app_root=app_root, iip_server=conf.IIP_SERVER)
+        parsed = urlparse(conf.IIP_SERVER)
+        iip_server_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        image_dir = parse_qs(parsed.query).get('FIF', ['/liber'])[0].rstrip('/')
+        self.render("templates/index.html", app_root=app_root,
+                    iip_server_url=iip_server_url, image_dir=image_dir)
 
 
 class DivaHandler(tornado.web.RequestHandler):

@@ -122,8 +122,8 @@
             enableHighlight: true,
             enableGrid: false,
             zoomLevel: 1,
-            iipServerURL: "http://diva.simssa.ca/fcgi-bin/iipsrv.fcgi",
-            imageDir: "/srv/images/liber",
+            iipServerURL: "{{iip_server_url}}",
+            imageDir: "{{image_dir}}",
             objectData: '{{static_url("liber.json")}}'
         });
         $('#search-wrapper').search({
