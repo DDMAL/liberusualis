@@ -10,9 +10,6 @@ import tornado.web
 import search
 
 
-# diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
-
-
 class SearchHandler(tornado.web.RequestHandler):
     def get(self, search_type, query):
         if not query:
@@ -34,14 +31,6 @@ class RootHandler(tornado.web.RequestHandler):
                     iip_server_url=iip_server_url, image_dir=image_dir)
 
 
-class DivaHandler(tornado.web.RequestHandler):
-    def get(self):
-        z = self.get_argument("z")
-        info = diva_s.get(int(z))
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(info))
-
-
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
     "debug": True,
@@ -56,7 +45,6 @@ def abs_path(relpath):
 
 application = tornado.web.Application([
     (abs_path(r"/?"), RootHandler),
-    (abs_path(r"/divaserve/?"), DivaHandler),
     (abs_path(r"/query/(.*)/(.*)"), SearchHandler),
 ], **settings)
 
