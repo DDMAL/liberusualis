@@ -29,7 +29,8 @@ function genUUID()
             elementSelector: '',        // Set in init(); the ID of the element plus '#'
             boxes: {},                  // Array of boxes etc
             orderedBoxes: [],
-            numBoxes: 0                // Set to orderedBoxes.length after the first JSON response
+            numBoxes: 0,               // Set to orderedBoxes.length after the first JSON response
+            currentBoxIndex: 0         // Index of currently shown highlight in orderedBoxes
         };
 
         $.extend(settings, globals);
@@ -63,9 +64,20 @@ function genUUID()
             $(".moreInfoButton").on('click', infoClick);
         };
 
+        var gotoHighlight = function(boxID)
+        {
+            var box = settings.boxes[boxID];
+            if (!box) return false;
+            settings.diva.gotoPageByIndex(box.pageIndex);
+            $(".search-result.selected").removeClass("selected");
+            $(".search-result[data-result-id=" + boxID + "]").addClass("selected");
+            updateBoxNumber(boxID);
+            return boxID;
+        };
+
         function gotoClick(e)
         {
-            settings.diva.gotoHighlight(e.target.closest(".search-result").getAttribute('data-result-id'));
+            gotoHighlight(e.target.closest(".search-result").getAttribute('data-result-id'));
         }
 
         function infoClick(e)
@@ -75,13 +87,6 @@ function genUUID()
             if (e.target.innerText == "More info") e.target.innerText = "Less info";
             else e.target.innerText = "More info";
         }
-
-        diva.Events.subscribe("SelectedHighlightChanged", function(highlightID, highlightPage)
-        {
-            $(".search-result.selected").removeClass("selected");
-            $(".search-result[data-result-id=" + highlightID + "]").addClass("selected");
-            updateBoxNumber(highlightID);
-        });
 
         var loadBoxes = function() {
             updateStatus("Loading results");
@@ -114,7 +119,7 @@ function genUUID()
                         var curBox = data[idx];
                         var pIindex = pageIndexes.indexOf(curBox['p'] - 1);
                         var boxID = curBox['id'] || genUUID();
-                        var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID};
+                        var dimensionsArr = {'width': curBox['w'], 'height': curBox['h'], 'ulx': curBox['x'], 'uly': curBox['y'], 'divID': boxID, 'pageIndex': curBox['p'] - 1};
                         settings.boxes[boxID] = dimensionsArr;
                         curBox.UUID = boxID;
                         if(settings.orderedBoxes.indexOf(boxID) == -1)
@@ -145,9 +150,9 @@ function genUUID()
                     var result;
                     
                     if (desiredResult === NaN || !inRange(desiredResult - 1))
-                        result = settings.diva.gotoHighlight(settings.orderedBoxes[0]);
+                        result = gotoHighlight(settings.orderedBoxes[0]);
                     else
-                        result = settings.diva.gotoHighlight(settings.orderedBoxes[desiredResult]);
+                        result = gotoHighlight(settings.orderedBoxes[desiredResult]);
                     
                     if (!result)
                         updateStatus("Invalid URL - can't find the sequence you asked for.");
@@ -273,11 +278,13 @@ function genUUID()
 
             // Handle clicking the prev / next buttons
             $('#search-prev').click(function() {
-                updateBoxNumber(settings.diva.gotoPreviousHighlight());
+                var prevIdx = (settings.currentBoxIndex - 1 + settings.numBoxes) % settings.numBoxes;
+                gotoHighlight(settings.orderedBoxes[prevIdx]);
             });
 
             $('#search-next').click(function() {
-                updateBoxNumber(settings.diva.gotoNextHighlight());
+                var nextIdx = (settings.currentBoxIndex + 1) % settings.numBoxes;
+                gotoHighlight(settings.orderedBoxes[nextIdx]);
             });
         };
         
@@ -292,6 +299,7 @@ function genUUID()
 
         var updateBoxNumber = function(boxID) {
             var boxNumber = settings.orderedBoxes.indexOf(boxID) + 1;
+            settings.currentBoxIndex = boxNumber - 1;
             $('#curBox').text(boxNumber);
         };
 
