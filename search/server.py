@@ -7,10 +7,10 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
-import divaserve
 import search
 
-diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
+
+# diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 
 class SearchHandler(tornado.web.RequestHandler):
