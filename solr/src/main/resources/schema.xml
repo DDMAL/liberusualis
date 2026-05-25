@@ -2,7 +2,8 @@
 <schema name="liber-search" version="1.6">
 
   <fieldType name="string" class="solr.StrField" sortMissingLast="true"/>
-  <fieldType name="int" class="solr.IntPointField" docValues="true"/>
+  <fieldType name="int"   class="solr.IntPointField"  docValues="true"/>
+  <fieldType name="plong" class="solr.LongPointField" docValues="true"/>
   <fieldType name="text_general" class="solr.TextField" positionIncrementGap="100">
     <analyzer type="index">
       <tokenizer class="solr.StandardTokenizerFactory"/>
@@ -14,6 +15,7 @@
     </analyzer>
   </fieldType>
 
+  <field name="_version_" type="plong"  indexed="false" stored="false"/>
   <field name="id"        type="string"       indexed="true"  stored="true"  required="true"/>
   <field name="pagen"     type="int"          indexed="true"  stored="true"  required="true"/>
   <field name="pnames"    type="string"       indexed="true"  stored="true"  required="false"/>
