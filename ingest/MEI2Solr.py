@@ -1,360 +1,205 @@
-# ================================================================
-# MEI2couchdb.py
-#
-# Usage: python MEI2couchdb directory shortest_gram longest_gram dotext
-# where directory is the path to the directory containing MEI files to munge in to the couch
-#       shortest_gram and longest_gram are integers in the range 2--10 defining which dbs to add to
-#       dotext is 0 if you don't want to process text
-#
-# Given a directory containing MEI files, this script iterates through all the MEI files
-# and saves a new CouchDB document for each location (bounding box) on the page that we might want to
-# highlight in our web application. We consider all pitch sequences 2--10 notes long. Pitch
-# sequences of different lengths are stored in separate CouchDB databases. Originally we were
-# storing one document per n-gram and then adding to a growing array of locations (box coordinates)
-# as instances of the same pitch sequence were found. To allow for page range filtering (and improved data access), we
-# modified our organization to store a separate doocument for each location. This means that
-# several documents can have the same pitch sequence, but with different locations. If a pitch sequence
-# spans two systems, two seperate bounding boxes are stored in the same document.
-#
-# Throughout this script, ulx and uly stand for upper left x and y coordinates respectively and lrx and lry stand for lower right coordinates.
-# These values define the pixels on the original page image that should be highlighted for a given item (sequence of neumes, line of text, etc.)
-#
-# Author: Jessica Thompson
-# Last modified June 2011
-#
-# ================================================================
+# Usage: python MEI2Solr.py <mei_directory> <shortest_gram> <longest_gram> <solr_url>
+# Example: python MEI2Solr.py /path/to/mei 2 10 http://localhost:8983/solr/liber-search
+import xml.etree.ElementTree as ET
 import pysolr
 import uuid
-from math import *
-from music21.interval import convertSemitoneToSpecifierGeneric
-# import time
-# from pymei.Import import convert
-from pymei import XmlImport
-
-import logging
-import sys
 import os
-import re
+import sys
+import logging
 
 logging.basicConfig(filename='errors.log', format='%(asctime)-6s: %(name)s - %(levelname)s - %(message)s')
 lg = logging.getLogger('meisearch')
 lg.setLevel(logging.DEBUG)
 
-systemcache = {}
-idcache = {}
-STEPREF = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+NS_MEI = 'http://www.music-encoding.org/ns/mei'
+NS_XML = 'http://www.w3.org/XML/1998/namespace'
+M = '{%s}' % NS_MEI
+X = '{%s}' % NS_XML
+STEPREF = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
 
-# *****************************FUNCTIONS*******************************
+# Maps semitones (within an octave) to diatonic interval size
+_SEMITONE_TO_GENERIC = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 7: 5, 8: 6, 9: 6, 10: 7, 11: 7}
 
-
-def convertStepToPs(step, oct):
-    '''
-    REMOVED FROM MUSIC21, so added here. -- AH
-
-    Utility conversion; does not process internals.
-    Takes in a note name string, octave number, and optional
-    Accidental object.
-
-    Returns a pitch space value as a floating point MIDI note number.
-
-    >>> from music21 import *
-    >>> pitch.convertStepToPs('c', 4, pitch.Accidental('sharp'))
-    61.0
-    >>> pitch.convertStepToPs('d', 2, pitch.Accidental(-2))
-    36.0
-    >>> pitch.convertStepToPs('b', 3, pitch.Accidental(3))
-    62.0
-    >>> pitch.convertStepToPs('c', 4, pitch.Accidental('half-flat'))
-    59.5
-    '''
-    step = step.strip().upper()
-    ps = float(((oct + 1) * 12) + STEPREF[step])
-    return ps
+def _semitone_to_generic(semitones):
+    n = abs(semitones)
+    octaves, rem = divmod(n, 12)
+    return _SEMITONE_TO_GENERIC.get(rem, 8) + octaves * 7
 
 
-def findbyID(llist, mid, meifile):
-    """ Returns the object in llist that has the given id. Used for finding zone.
-        pymei function get_by_facs can be used instead, but this one is faster.
-    """
-    if mid in idcache:
-        return idcache[mid]
-    else:
-        # idcache[mid] = llist[(i for i, obj in enumerate(llist) if obj.id == mid).next()]
-        idcache[mid] = meifile.getElementById(mid)
-        return idcache[mid]
+def step_to_ps(pname, oct_val):
+    return float(((int(oct_val) + 1) * 12) + STEPREF[pname.lower()])
 
 
-def getLocation(seq, meifile, zones):
-    """ Given a sequence of notes and the corresponding MEI Document, calculates and returns the json formatted list of
-        locations (box coordinates) to be stored for an instance of a pitch sequence in our CouchDB.
-        If the sequence is contained in a single system, only one location will be stored. If the sequence
-        spans two systems, a list of two locations will be stored.
-    """
-    ulys = []
-    lrys = []
-    twosystems = 0
-    endofsystem = len(seq)-1
-    if seq[0].getId() not in systemcache:
-        systemcache[seq[0].getId()] = meifile.lookBack(seq[0], "sb")
-        # systemcache[seq[0]] = meifile.get_system(seq[0])
-    if seq[endofsystem].getId() not in systemcache:
-        systemcache[seq[endofsystem].getId()] = meifile.lookBack(seq[endofsystem], "sb")
-        # systemcache[seq[endofsystem]] = meifile.get_system(seq[endofsystem])
-
-    if systemcache[seq[0].getId()] != systemcache[seq[endofsystem].getId()]:  # then the sequence spans two systems and we must store two seperate locations to highlight
-        twosystems = 1
-        for i in range(1 , len(seq)):
-            if seq[i-1].getId() not in systemcache:
-                systemcache[seq[i-1].getId()] = meifile.lookBack(seq[i-1], "sb")
-            if seq[i] not in systemcache:
-                systemcache[seq[i].getId()] = meifile.lookBack(seq[i], "sb")
-
-            # find the last note on the first system and the first note on the second system
-            if systemcache[seq[i-1].getId()] != systemcache[seq[i].getId()]:
-                endofsystem = i  # this will be the index of the first note on second system
-                # ulx1 = int(meifile.get_by_facs(seq[0].parent.parent.facs)[0].ulx)
-                # lrx1 = int(meifile.get_by_facs(seq[i-1].parent.parent.facs)[0].lrx)
-                # ulx2 = int(meifile.get_by_facs(seq[i].parent.parent.facs)[0].ulx)
-                # lrx2 = int(meifile.get_by_facs(seq[-1].parent.parent.facs)[0].lrx)
-                ulx1 = int(findbyID(zones, seq[0].parent.parent.getAttribute("facs").value, meifile).getAttribute("ulx").value)
-                lrx1 = int(findbyID(zones, seq[i-1].parent.parent.getAttribute("facs").value, meifile).getAttribute("lrx").value)
-                ulx2 = int(findbyID(zones, seq[i].parent.parent.getAttribute("facs").value, meifile).getAttribute("ulx").value)
-                lrx2 = int(findbyID(zones, seq[-1].parent.parent.getAttribute("facs").value, meifile).getAttribute("lrx").value)
-    else:  # the sequence is contained in one system and only one box needs to be highlighted
-        ulx = int(findbyID(zones, seq[0].parent.parent.getAttribute("facs").value, meifile).getAttribute("ulx").value)
-        lrx = int(findbyID(zones, seq[-1].parent.parent.getAttribute("facs").value, meifile).getAttribute("lrx").value)
-        # ulx = int(meifile.get_by_facs(seq[0].parent.parent.facs)[0].ulx)
-        # lrx = int(meifile.get_by_facs(seq[-1].parent.parent.facs)[0].lrx)
-
-    for note in seq:
-        ulys.append(int(findbyID(zones, note.parent.parent.getAttribute("facs").value, meifile).getAttribute("uly").value))
-        lrys.append(int(findbyID(zones, note.parent.parent.getAttribute("facs").value, meifile).getAttribute("lry").value))
-
-    if twosystems:
-        uly1 = min(ulys[:endofsystem])
-        uly2 = min(ulys[endofsystem:])
-        lry1 = max(lrys[:endofsystem])
-        lry2 = max(lrys[endofsystem:])
-        return [{"ulx": int(ulx1), "uly": int(uly1), "height": abs(uly1 - lry1), "width": abs(ulx1 - lrx1)}, {"ulx": int(ulx2), "uly": int(uly2), "height": abs(uly2 - lry2), "width": abs(ulx2 - lrx2)}]
-    else:
-        uly = min(ulys)
-        lry = max(lrys)
-        return [{"ulx": int(ulx), "uly": int(uly), "height": abs(uly - lry), "width": abs(ulx - lrx)}]
+def get_contour(semitones):
+    return ''.join('r' if s == 0 else ('u' if s > 0 else 'd') for s in semitones)
 
 
-def getNeumes(seq, counter):
-    """ Given a list of MEI note elements, return a string of the names of the neumes seperated by underscores.
-    """
-    neumes = str(seq[0].parent.parent.getAttribute('name').value)
-    for k in range(1, counter):
-        if seq[k].parent.parent.id != seq[k-1].parent.parent.id:
-            neumes = neumes + '_' + str(seq[k].parent.parent.getAttribute('name').value)
-    return neumes
-
-
-def getPitchNames(seq):
-    """ Given a list of MEI note elements, return the tuple [pnames, midipitch] where pnames is a string of the
-    pitch names of the given notes (no octave information) and midipitch is a list of the midi values for those
-    same pitches. Music21's convertStepToPs function is used to get midi pitch values.
-    """
-    pnames = []
-    midipitch = []
-    for note in seq:
-        pnames.append(note.getAttribute("pname").value[0])  # a string of pitch names e.g. 'gbd'
-        midipitch.append(int(convertStepToPs(str(note.getAttribute("pname").value[0]), int(note.getAttribute("oct").value))))
-    return [str("".join(pnames)), midipitch]
-
-
-def getIntervals(semitones, pnames):
-    """ Get quality (major, minor, etc.) invariant interval name and direction for example, an ascending
-        major second and an ascending minor second will both be encoded as 'u2'. the only tritone to occur is between
-        b and f, in the context of this application we will assume that the b will always be sung as b
-        flat. So a tritone found in the music is never encoded as a tritone in our database; it will instead always be
-        represented as either a fifth or a fourth, depending on inversion. If the one wishes to search for tritones,
-        they may use the semitones field.
-    """
+def get_intervals(semitones, pnames):
     intervals = []
-    for z, interval in enumerate(semitones):
+    for i, interval in enumerate(semitones):
         if interval == 0:
             intervals.append('r')
         else:
-            if interval > 0:
-                direction = 'u'
-            else:
-                direction = 'd'
+            direction = 'u' if interval > 0 else 'd'
             if interval == 6:
-                if pnames[z] == 'b':
-                    size = 5
-                else:
-                    size = 4
+                size = 5 if pnames[i] == 'b' else 4
             elif interval == -6:
-                if pnames[z] == 'b':
-                    size = 4
-                else:
-                    size = 5
+                size = 4 if pnames[i] == 'b' else 5
             else:
-                size = abs(int(convertSemitoneToSpecifierGeneric(interval)[1]))
-
-            intervals.append("{0}{1}".format(direction, str(size)))
-
+                size = _semitone_to_generic(interval)
+            intervals.append(f"{direction}{size}")
     return "_".join(intervals)
 
 
-def getContour(semitones):
-    """ Given a list of integers defining the size and direction of a series of musical intervals in semitones,
-        this function encodes the contour of the melody with Parsons code for musical contour where u=up, d=down, r=repeat.
-    """
-    contour = ''
-    for p in semitones:
-        if p == 0:
-            contour = contour + 'r'  # repeated
-        elif p > 0:
-            contour = contour + 'u'  # up
-        elif p < 0:
-            contour = contour + 'd'  # down
-    return contour
-
-
-def storeText(lines, zones, textdb):
-    """ For each line of text in the list "lines", this function gets the corresponding box coordinates and saves the
-    line as a doc in the "text" database.
-    """
-    for line in lines:
-        text = line.value
-        facs = str(line.getAttribute('facs').value)
-        zone = findbyID(zones, facs)
-        ulx = int(zone.ulx)
-        uly = int(zone.uly)
-        lrx = int(zone.lrx)
-        lry = int(zone.lry)
-        textdb.save({'pagen': pagen, 'text': text, 'location': {"ulx": ulx, "uly": uly, "height": abs(uly - lry), "width": abs(ulx - lrx)}})
-    return 1
-
-
-def processMeiFile(ffile, shortest_gram, longest_gram, page_number):
-    solr_server = "http://localhost:8080"
-    solrconn = pysolr.Solr(solr_server)
-    print('\nProcessing ' + str(ffile) + '...')
+def process_mei_file(filepath, shortest_gram, longest_gram, solrconn):
+    print(f'\nProcessing {filepath}...')
     try:
-        meifile = XmlImport.documentFromFile(str(ffile))
+        tree = ET.parse(filepath)
     except Exception as e:
-        print("E: ", e)
-        lg.debug("Could not process file {0}. Threw exception: {1}".format(ffile, e))
-        print("Whoops!")
+        lg.error(f"Could not parse {filepath}: {e}")
+        return
 
-    page = meifile.getElementsByName('page')
-    pagen = page_number
+    root = tree.getroot()
 
-    notes = meifile.getElementsByName('note')
-    zones = meifile.getElementsByName('zone')
-    nnotes = len(notes)  # number of notes in file
-    # print str(nnotes) + 'notes\n'
+    pb = root.find(f'.//{M}pb')
+    if pb is None:
+        lg.warning(f"No pb element in {filepath}")
+        return
+    pagen = int(pb.get('n', 0))
 
-    # get and store text
-    # if dotext:
-    #    lines = meifile.search('l')
-    #    storeText(lines, zones, textdb)
+    zones = {}
+    for zone in root.findall(f'.//{M}zone'):
+        zid = zone.get(f'{X}id')
+        if zid:
+            zones[zid] = {
+                'ulx': int(zone.get('ulx', 0)),
+                'uly': int(zone.get('uly', 0)),
+                'lrx': int(zone.get('lrx', 0)),
+                'lry': int(zone.get('lry', 0)),
+            }
 
-    # Set these to control which databases you access
-    # shortest_gram = 2
-    # longest_gram = 10
-    mydocs = []
+    parent_map = {c: p for p in root.iter() for c in p}
 
-    for i in range(shortest_gram, longest_gram+1):
-        # dbname = 'notegrams_'+str(i)
-        # db = couch[dbname] #existing db
+    # Assign each nc to a system (identified by the preceding mei:sb xml:id)
+    current_system = '__start__'
+    nc_system = {}
+    for elem in root.iter():
+        if elem.tag == f'{M}sb':
+            current_system = elem.get(f'{X}id', current_system)
+        elif elem.tag == 'nc':
+            nc_system[id(elem)] = current_system
 
-        # uncomment the lines below if you want to process only files that aren't already in the couch
-        # only proceed with the rest of the script if a query for pagen returns 0 hits
-        # map_fun = '''function(doc) {
-        #            emit(doc.pagen, null)
-        #        }'''
-        # rows = db.query(map_fun, key=pagen)
-        # lrows = len(rows)
-        lrows = 0  # comment out this line if you want to process files that aren't already in the couch
-        if lrows == 0:
-            # *******************TEST************************
-            # for note in notes:
-            #             s = meifile.get_system(note)
-            #             neume = str(note.parent.parent.attribute_by_name('name').value)
-            #             print 'pitch: '+ str(note.pitch[0])+ ' neume: ' + neume + " system: " +str(s)
-            # ***********************************************
+    all_nc = list(root.iter('nc'))
+    n_nc = len(all_nc)
+    docs = []
 
-            print("Processing pitch sequences... ")
-            # for j,note in enumerate(notes):
-            for j in range(0, nnotes-i):
-                seq = notes[j:j+i]
-                # get box coordinates of sequence
-                # if ffile == "/Volumes/Copland/Users/ahankins/Documents/code/testing/Liber_Usualis_Final_Output/0012/0012_corr.mei":
-                #     pdb.set_trace()
+    for gram_len in range(shortest_gram, longest_gram + 1):
+        for j in range(n_nc - gram_len + 1):
+            seq = all_nc[j:j + gram_len]
 
-                location = getLocation(seq, meifile, zones)
-                # print 'location: ' + str(location)
+            pnames = []
+            midi = []
+            valid = True
+            for nc in seq:
+                pname = nc.get('pname', '').lower()
+                oct_val = nc.get('oct', '3')
+                if not pname or pname not in 'abcdefg':
+                    valid = False
+                    break
+                pnames.append(pname)
+                midi.append(int(step_to_ps(pname, oct_val)))
 
-                # get neumes
-                neumes = getNeumes(seq, i)
+            if not valid:
+                continue
 
-        #         # get pitch names
-                [pnames, midipitch] = getPitchNames(seq)
+            semitones = [m - n for n, m in zip(midi[:-1], midi[1:])]
 
-        #         # get semitones
-        #         # calculate difference between each adjacent entry in midipitch list
-                semitones = [m-n for n, m in zip(midipitch[:-1], midipitch[1:])]
-                str_semitones = str(semitones)[1:-1]  # string will be stored instead of array for easy searching
-                str_semitones = str_semitones.replace(', ', '_')
+            # Neume names: collect unique neume types as nc traverses neumes
+            neume_names = []
+            prev_neume = None
+            for nc in seq:
+                neume_elem = parent_map.get(nc)
+                if neume_elem is not None and neume_elem is not prev_neume:
+                    neume_names.append(neume_elem.get('type', 'unknown'))
+                    prev_neume = neume_elem
 
-        #         # get quality invariant interval name and direction
-        #         # for example, an ascending major second and an ascending minor second will both be encoded as 'u2'
-        #         # the only tritone to occur would be between b and f, in the context of this application we will assume that the be will always be sung as b flat
-        #         # thus the tritone is never encoded as such and will always be represented as either a fifth or a fourth, depending on inversion
-                intervals = getIntervals(semitones, pnames)
+            # Bounding boxes
+            systems = [nc_system.get(id(nc), '__start__') for nc in seq]
 
-        #         # get contour - encode with Parsons code for musical contour
-                contour = getContour(semitones)
-        #         # save new document
-                mydocs.append({'id': str(uuid.uuid4()), 'pagen': int(pagen), 'pnames': pnames, 'neumes': neumes, 'contour': contour, 'semitones': str_semitones, 'intervals': intervals, 'location': str(location)})
+            def zone_for_nc(nc):
+                neume_elem = parent_map.get(nc)
+                if neume_elem is None:
+                    return None
+                facs = neume_elem.get('facs', '')
+                return zones.get(facs)
 
-        else:
-            print('page ' + str(pagen) + ' already processed\n')
+            def box_for_part(part):
+                first_z = zone_for_nc(part[0])
+                last_z = zone_for_nc(part[-1])
+                if not first_z or not last_z:
+                    return None
+                all_z = [z for nc in part for z in [zone_for_nc(nc)] if z]
+                return {
+                    'ulx': first_z['ulx'],
+                    'uly': min(z['uly'] for z in all_z),
+                    'height': abs(min(z['uly'] for z in all_z) - max(z['lry'] for z in all_z)),
+                    'width': abs(first_z['ulx'] - last_z['lrx']),
+                }
 
-    solrconn.add(mydocs)
-    solrconn.commit()
-    systemcache.clear()
-    idcache.clear()
+            if len(set(systems)) == 1:
+                box = box_for_part(seq)
+                if not box:
+                    continue
+                location = [box]
+            else:
+                split = next(i for i in range(1, len(seq)) if systems[i] != systems[i - 1])
+                box1 = box_for_part(seq[:split])
+                box2 = box_for_part(seq[split:])
+                if not box1 or not box2:
+                    continue
+                location = [box1, box2]
+
+            docs.append({
+                'id': str(uuid.uuid4()),
+                'pagen': pagen,
+                'pnames': ''.join(pnames),
+                'neumes': '_'.join(neume_names),
+                'contour': get_contour(semitones),
+                'semitones': '_'.join(str(s) for s in semitones),
+                'intervals': get_intervals(semitones, pnames),
+                'location': str(location),
+            })
+
+    if docs:
+        solrconn.add(docs)
+        solrconn.commit()
+    print(f'  Page {pagen}: {len(docs)} documents indexed')
+
 
 if __name__ == '__main__':
-    # ***************************** MEI PROCESSING *******************************
-    args = sys.argv
-    path = args[1]
-    shortest_gram = int(args[2])
-    longest_gram = int(args[3])
-    dotext = int(args[4])
+    if len(sys.argv) < 5:
+        print("Usage: python MEI2Solr.py <directory> <shortest_gram> <longest_gram> <solr_url>")
+        sys.exit(1)
 
-    # Generate list of files to process, preferring human-corrected MEI files
+    path = sys.argv[1]
+    shortest_gram = int(sys.argv[2])
+    longest_gram = int(sys.argv[3])
+    solr_url = sys.argv[4]
+
+    solrconn = pysolr.Solr(solr_url, timeout=120)
+
     meifiles = []
     for bd, dn, fn in os.walk(path):
-        if ".git" in bd:
-            continue
         for f in fn:
-            if f.startswith("."):
-                continue
-            if "_corr.mei" in f:
+            if f.endswith('.mei'):
                 meifiles.append(os.path.join(bd, f))
-            # if not (('uncorr' in f) and os.path.exists(os.path.join(bd,f[0:5]+'corr.mei'))): # if current is uncorr version and corr version exists, don't add to list
-
-            #     meifiles = meifiles + [os.path.join(bd,f)]
 
     meifiles.sort()
-    # couch = couchdb.Server("http://localhost:5984")
-    # textdb = couch['text'] # database for text
+    print(f"Found {len(meifiles)} MEI files")
 
-    # Iterate through each MEI file in directory
     for ffile in meifiles:
-        # if len(re.findall('0159', ffile)) == 0:
-        #    continue
-
-        pageNumber = ffile.split("_")[0].split("/")[1]
-        processMeiFile(ffile, longest_gram, shortest_gram, pageNumber)
-        # solrconn.commit()
-        # systemcache.clear()
-        # idcache.clear()
+        try:
+            process_mei_file(ffile, shortest_gram, longest_gram, solrconn)
+        except Exception as e:
+            lg.error(f"Failed on {ffile}: {e}")
+            print(f"  ERROR: {e}")
