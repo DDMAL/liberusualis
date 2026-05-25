@@ -1,9 +1,8 @@
-import conf
 import json
-import os
-import pysolr
-import re
 from operator import itemgetter
+
+import conf
+import pysolr
 
 import search_utils
 

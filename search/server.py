@@ -1,16 +1,16 @@
-import conf
 import json
 import os
+from urllib.parse import urlparse, parse_qs
+
+import conf
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
-from operator import itemgetter
-from urllib.parse import urlparse, parse_qs
 
+import divaserve
 import search
 
-
-# diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
+diva_s = divaserve.DivaServe(conf.IMAGE_DIRECTORY)
 
 
 class SearchHandler(tornado.web.RequestHandler):
