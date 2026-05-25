@@ -3,8 +3,6 @@
 
   <luceneMatchVersion>9.0.0</luceneMatchVersion>
 
-  <dataDir>/var/db/solr/liber</dataDir>
-
   <directoryFactory name="DirectoryFactory"
                     class="${solr.directoryFactory:solr.StandardDirectoryFactory}"/>
 
