@@ -4,6 +4,7 @@ solr/target/*
 .idea
 
 *.tiff
+*.jpg
 *.png
 *.zip
 book/
