@@ -2,3 +2,9 @@
 conf.py
 solr/target/*
 .idea
+
+*.tiff
+*.png
+*.zip
+book/
+hocr_output/
