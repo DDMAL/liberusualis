@@ -26,3 +26,16 @@ to build a war file that can be deployed in tomcat or another servlet container.
 
 
 For more information about the Liber usualis project, see our [project page](http://ddmal.music.mcgill.ca/research/omr/Search_the_Liber_Usualis).
+
+## Symlinks
+If necessary, OCR may need to be reran; keeping images locally may be prohibitive and you might
+end up using symlinks. Here is the CLI command to create symlinks within the directory you are running
+the command from.
+```
+ln -s /path/to/the/images/*.tiff .
+```
+
+To remove later, use
+```
+find . -maxdepth 1 -type l -name "*.tiff" -delete
+```
