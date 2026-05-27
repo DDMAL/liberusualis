@@ -35,6 +35,13 @@ the command from.
 ln -s /path/to/the/images/*.tiff .
 ```
 
+To only selectively add symlinks, such as for a small test, you can do something like the following:
+```
+ln -s /path/to/your/photos/liber_0001*.jpg .
+ln -s /path/to/your/photos/liber_0002*.jpg .
+ln -s /path/to/your/photos/liber_0003*.jpg .
+```
+
 To remove later, use
 ```
 find . -maxdepth 1 -type l -name "*.tiff" -delete
